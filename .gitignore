@@ -1,0 +1,40 @@
+# Node modules
+node_modules*
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env*
+
+# TypeScript output
+dist
+build
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Editor configs
+.vscode
+.idea
+
+# Optional: if using coverage tools (e.g., nyc or jest)
+coverage
+
+# Optional: if using PM2 for process manager
+.pids
+*.pm2.log
