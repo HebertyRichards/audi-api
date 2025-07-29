@@ -55,9 +55,20 @@ export async function logout() {
 }
 
 export async function getUserByToken(token: string) {
-  const { data, error } = await supabase.auth.getUser(token);
+  const { data: authData, error } = await supabase.auth.getUser(token);
   if (error) {
     throw new Error('Token inválido ou expirado');
   }
-  return data.user;
+  const user = authData.user;
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('id', user.id)  
+    .single();         
+
+  if (profileError) {
+    console.error('Erro ao buscar perfil do usuário:', profileError.message);
+    return user; 
+  }
+  return { ...user, username: profile.username };
 }

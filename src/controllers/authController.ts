@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import * as authService from '../services/authService';
-import cookie from 'cookie';
+import * as cookie from 'cookie';
 
 export async function register(req: Request, res: Response) {
   try {
