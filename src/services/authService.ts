@@ -40,7 +40,7 @@ export async function login(email: string, password: string, keepLogged: boolean
 
   return {
     access_token: data.session.access_token,
-    refresh_token: data.session.refresh_token,
+    refresh_token: keepLogged ? data.session.refresh_token : undefined,
     access_token_expiry: ONE_HOUR,
     refresh_token_expiry: refreshTokenMaxAge,
   };
@@ -71,4 +71,19 @@ export async function getUserByToken(token: string) {
     return user; 
   }
   return { ...user, username: profile.username };
+}
+
+export async function refreshAccessToken(refreshToken: string) {
+  const { data, error } = await supabase.auth.refreshSession({
+    refresh_token: refreshToken,
+  });
+
+  if (error || !data.session) {
+    throw new Error('Não foi possível atualizar o token de acesso.');
+  }
+
+  return {
+    access_token: data.session.access_token,
+    access_token_expiry: ONE_HOUR,
+  };
 }
