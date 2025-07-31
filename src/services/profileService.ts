@@ -1,20 +1,8 @@
 import supabase from '../config/supabase';
 import dotenv from 'dotenv';
+import { UserProfileData } from '../types/user';
 
 dotenv.config();
-
-interface UserProfileData {
-  id: string;
-  username: string;
-  website?: string;
-  gender?: string;
-  birthdate?: string;
-  location?: string;
-  joined_at?: string;
-  last_login?: string;
-  total_posts?: number;
-  role?: string;
-}
   
 export async function getProfileById(id: string): Promise<
 Pick<
@@ -64,4 +52,17 @@ export async function updateProfile(
   }
 
   return { message: 'Perfil atualizado com sucesso!', data };
+}
+
+export async function DeleteProfile(id: string): Promise<{ message: string }> {
+  const { error } = await supabase
+    .from('profiles')
+    .delete()
+    .eq('id', id);
+  if (error) {
+    console.error('Erro ao deletar perfil:', error.message);
+    throw new Error('Erro ao deletar perfil do usuário.');
+  }
+
+  return { message: 'Perfil deletado com sucesso!' };
 }
