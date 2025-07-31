@@ -1,11 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
+import supabase from '../config/supabase';
 import dotenv from 'dotenv';
 
 dotenv.config();
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_ANON_KEY!
-);
 
 const ONE_HOUR = 60 * 60;
 const THIRTY_DAYS = 60 * 60 * 24 * 30;
