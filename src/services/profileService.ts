@@ -40,11 +40,14 @@ export async function updateProfile(
 
   const allowedFields = ['username', 'website', 'gender', 'birthdate', 'location'] as const;
 
-  const fieldsToUpdate = Object.fromEntries(
+  const fieldsToUpdate: Partial<Record<typeof allowedFields[number], string | null>> = Object.fromEntries(
     Object.entries(profile).filter(([key, value]) =>
-      allowedFields.includes(key as typeof allowedFields[number]) && value !== undefined
+      allowedFields.includes(key as typeof allowedFields[number])
     )
   );
+  if (fieldsToUpdate.birthdate === "") {
+    fieldsToUpdate.birthdate = null;
+  }
 
   if (Object.keys(fieldsToUpdate).length === 0) {
     throw new Error('Nenhum campo válido para atualizar.');
