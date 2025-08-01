@@ -29,3 +29,13 @@ export async function deleteUserProfile(req: Request, res: Response) {
     res.status(500).json({ error: error.message });
   }
 }
+
+export async function getUserProfile(req: Request, res: Response) {
+  try {
+    const { username } = req.params; 
+    const profile = await profileService.getUserProfileByUsername(username);
+    res.status(200).json(profile);
+  } catch (error: any) {
+    res.status(404).json({ error: error.message });
+  }
+}

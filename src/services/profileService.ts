@@ -1,6 +1,6 @@
 import supabase from '../config/supabase';
 import dotenv from 'dotenv';
-import { UserProfileData } from '../types/user';
+import { UserProfileData, UserProfileWithoutId } from '../types/user';
 
 dotenv.config();
   
@@ -65,4 +65,18 @@ export async function DeleteProfile(id: string): Promise<{ message: string }> {
   }
 
   return { message: 'Perfil deletado com sucesso!' };
+}
+
+export async function getUserProfileByUsername(username: string): Promise<UserProfileWithoutId> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('username, gender, birthdate, location, website, joined_at, last_login, total_posts, role')
+    .eq('username', username)
+    .single();
+
+  if (error || !data) {
+    throw new Error('Usuário não encontrado.');
+  }
+
+  return data;
 }

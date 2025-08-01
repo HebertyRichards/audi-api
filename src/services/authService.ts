@@ -23,13 +23,22 @@ return { message: 'Usuário registrado com sucesso!',}
 }
 
 export async function login(email: string, password: string, keepLogged: boolean) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
+  const { data, error } = await supabase.auth.signInWithPassword({ 
+    email, 
     password,
   });
 
   if (error || !data.session) {
     throw new Error(error?.message || 'Erro no login');
+  }
+
+  const userId = data.user?.id;
+
+  if (userId) {
+    await supabase
+      .from("profiles")
+      .update({ last_login: new Date().toISOString() })
+      .eq("id", userId);
   }
 
   const refreshTokenMaxAge = keepLogged ? THIRTY_DAYS : ONE_HOUR;
