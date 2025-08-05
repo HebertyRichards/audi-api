@@ -82,13 +82,13 @@ export async function getSession(req: Request, res: Response) {
       user = await authService.getUserByToken(newAccessToken);
     } catch (error: any) {
       clearAuthCookies(res);
-      return res.status(401).json({ error: error.message });
+      res.status(401).json({ error: error.message });
     }
   }
   if (user) {
     return res.status(200).json(user);
   } else {
     clearAuthCookies(res);
-    return res.status(401).json({ error: 'Nenhuma sessão ativa encontrada.' });
+    res.status(401).json({ error: 'Nenhuma sessão ativa encontrada.' });
   }
 }
