@@ -1,15 +1,24 @@
 import supabase from '../config/supabase';
 import dotenv from 'dotenv';
+import { RegisterOptions } from '../types/auth';
 
 dotenv.config();
 
 const ONE_HOUR = 60 * 60;
 const THIRTY_DAYS = 60 * 60 * 24 * 30;
 
-export async function register(username: string, email: string, password: string) {
+export async function register(
+  username: string,
+  email: string,
+  password: string,
+  options?: RegisterOptions
+) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      emailRedirectTo: options?.emailRedirectTo ?? `${process.env.FRONTEND_URL}/confirmation`,
+    },
   });
 
   if (data.user) {
@@ -19,7 +28,7 @@ export async function register(username: string, email: string, password: string
     console.error('Erro ao registrar usuário:', error);
     throw new Error(error.message);
   }
-return { message: 'Usuário registrado com sucesso!',}
+  return { message: 'Usuário registrado com sucesso!',}
 }
 
 export async function login(email: string, password: string, keepLogged: boolean) {

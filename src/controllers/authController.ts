@@ -21,8 +21,8 @@ const clearAuthCookies = (res: Response) => {
 
 export async function register(req: Request, res: Response) {
   try {
-    const { username, email, password } = req.body;
-    const result = await authService.register(username, email, password);
+    const { username, email, password, options } = req.body;
+    const result = await authService.register(username, email, password, options);
     res.status(201).json(result);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
