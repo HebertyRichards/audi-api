@@ -1,8 +1,9 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import authRoutes from './routes/authRoutes';
 import { corsMiddleware } from './middlewares/cors';
+import authRoutes from './routes/authRoutes';
 import profileRoutes from './routes/profileRoutes';
+import userRoutes from './routes/userRoutes';
 
 dotenv.config();
 
@@ -14,6 +15,7 @@ app.use(express.json());
 
 app.use('/auth', authRoutes);
 app.use('/profile', profileRoutes);
+app.use('/user', userRoutes);
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
