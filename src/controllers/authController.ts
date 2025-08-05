@@ -21,8 +21,8 @@ const clearAuthCookies = (res: Response) => {
 
 export async function register(req: Request, res: Response) {
   try {
-    const { username, email, password } = req.body;
-    const result = await authService.register(username, email, password);
+    const { username, email, password, options } = req.body;
+    const result = await authService.register(username, email, password, options);
     res.status(201).json(result);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
@@ -82,13 +82,13 @@ export async function getSession(req: Request, res: Response) {
       user = await authService.getUserByToken(newAccessToken);
     } catch (error: any) {
       clearAuthCookies(res);
-      return res.status(401).json({ error: error.message });
+      res.status(401).json({ error: error.message });
     }
   }
   if (user) {
     return res.status(200).json(user);
   } else {
     clearAuthCookies(res);
-    return res.status(401).json({ error: 'Nenhuma sessão ativa encontrada.' });
+    res.status(401).json({ error: 'Nenhuma sessão ativa encontrada.' });
   }
 }
