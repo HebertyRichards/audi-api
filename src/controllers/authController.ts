@@ -86,9 +86,47 @@ export async function getSession(req: Request, res: Response) {
     }
   }
   if (user) {
-    return res.status(200).json(user);
+    res.status(200).json(user);
   } else {
     clearAuthCookies(res);
     res.status(401).json({ error: 'Nenhuma sessão ativa encontrada.' });
+  }
+}
+
+export async function changePassword(req: Request, res: Response) {
+  try {
+    const { newPassword, accessToken } = req.body;
+    const token = accessToken || req.cookies['sb-access-token'];
+
+    if (!token) {
+      return res.status(401).json({ error: 'Token de autenticação não fornecido.' });
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: 'A nova senha deve ter pelo menos 6 caracteres.' });
+    }
+
+    const result = await authService.updatePasswordWithToken(token, newPassword);
+    return res.status(200).json(result);
+
+  } catch (error: any) {
+    console.error('Erro ao atualizar a senha:', error);
+    return res.status(500).json({ error: error.message || 'Erro interno do servidor.' });
+  }
+}
+
+export async function sendRecoveryEmail(req: Request, res: Response) {
+  const { email } = req.body;
+
+  if (!email) {
+    res.status(400).json({ error: "E-mail é obrigatório." });
+  }
+
+  try {
+    const result = await authService.sendRecoveryEmail(email);
+    res.status(200).json(result);
+  } catch (error: any) {
+    console.error({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 }

@@ -1,6 +1,6 @@
-import supabase from '../config/supabase';
+import {supabase, supabaseAdmin} from '../config/supabase';
 import dotenv from 'dotenv';
-import { RegisterOptions } from '../types/auth';
+import { RegisterOptions, RecoveryOptions } from '../types/auth';
 
 dotenv.config();
 
@@ -100,4 +100,44 @@ export async function refreshAccessToken(refreshToken: string) {
     access_token: data.session.access_token,
     access_token_expiry: ONE_HOUR,
   };
+}
+
+export async function updatePasswordWithToken(accessToken: string, newPassword: string) {
+  // 1. PRIMEIRO, usamos o cliente PADRÃO para validar o token de acesso
+  // e obter os dados do usuário. Isso confirma que o token é válido.
+  const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
+
+  if (userError || !user) {
+    console.error('Falha ao validar o token de recuperação:', userError);
+    throw new Error('Token de recuperação inválido ou expirado.');
+  }
+
+  // 2. AGORA, usamos o cliente de ADMINISTRAÇÃO para atualizar a senha do usuário
+  // usando o ID que obtivemos no passo anterior.
+  const { error: adminError } = await supabaseAdmin.auth.admin.updateUserById(
+    user.id,
+    { password: newPassword }
+  );
+
+  if (adminError) {
+    console.error('Erro do Admin Client ao atualizar a senha:', adminError);
+    throw new Error('Não foi possível atualizar a senha. Por favor, tente novamente.');
+  }
+
+  return { message: 'Senha atualizada com sucesso!' };
+}
+
+export async function sendRecoveryEmail(email: string, options?: RecoveryOptions) {
+  const redirectTo = options?.redirectTo ?? `${process.env.FRONTEND_URL}/reset-password`;
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  });
+
+  if (error) {
+    console.error('Erro ao enviar e-mail de recuperação:', error);
+    throw new Error(error.message);
+  }
+
+  return { message: 'Link de recuperação enviado com sucesso!' };
 }
