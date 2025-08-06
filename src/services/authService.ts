@@ -1,6 +1,6 @@
 import supabase from '../config/supabase';
 import dotenv from 'dotenv';
-import { RegisterOptions } from '../types/auth';
+import { RegisterOptions, RecoveryOptions } from '../types/auth';
 
 dotenv.config();
 
@@ -100,4 +100,29 @@ export async function refreshAccessToken(refreshToken: string) {
     access_token: data.session.access_token,
     access_token_expiry: ONE_HOUR,
   };
+}
+
+export async function updatePassword(newPassword: string) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+  if (error) {
+    throw new Error(error.message || "Erro ao atualizar a senha.");
+  }
+
+  return { message: "Senha atualizada com sucesso!" };
+}
+
+export async function sendRecoveryEmail(email: string, options?: RecoveryOptions) {
+  const redirectTo = options?.redirectTo ?? `${process.env.FRONTEND_URL}/reset-password`;
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  });
+
+  if (error) {
+    console.error('Erro ao enviar e-mail de recuperação:', error);
+    throw new Error(error.message);
+  }
+
+  return { message: 'Link de recuperação enviado com sucesso!' };
 }
