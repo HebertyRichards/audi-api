@@ -1,4 +1,4 @@
-import {supabase, supabaseAdmin} from '../config/supabase';
+import { supabase, supabaseAdmin } from '../config/supabase';
 import dotenv from 'dotenv';
 import { RegisterOptions, RecoveryOptions } from '../types/auth';
 

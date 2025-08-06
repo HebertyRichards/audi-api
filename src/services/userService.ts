@@ -1,4 +1,4 @@
-import supabase from '../config/supabase';
+import { supabase } from '../config/supabase';
 import dotenv from 'dotenv';
 import { UserProfileData } from '../types/user';
 
