@@ -7,7 +7,7 @@ const createCookie = (name: string, value: string, maxAge: number): string => {
     httpOnly: true,
     maxAge: maxAge,
     path: '/',
-    sameSite: 'lax',
+    sameSite: 'none',
     secure: process.env.NODE_ENV === 'production',
   });
 };
