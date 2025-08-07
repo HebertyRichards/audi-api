@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import * as authService from '../services/authService';
 import * as cookie from 'cookie';
 import { supabase } from '../config/supabase';
+import { getErrorMessage } from '../helpers/Message';
 
 const createCookie = (name: string, value: string, maxAge: number): string => {
   return cookie.serialize(name, value, {
@@ -19,11 +20,6 @@ const clearAuthCookies = (res: Response) => {
     createCookie('sb-refresh-token', '', 0),
   ]);
 };
-
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error);
-}
 
 export async function register(req: Request, res: Response) {
   try {
@@ -53,7 +49,7 @@ export async function register(req: Request, res: Response) {
     if (message.includes("User already registered")) {
        return res.status(409).json({ error: "Este e-mail já está em uso." });
     }
-    return res.status(500).json({ error: "Erro ao registrar usuário. Tente novamente mais tarde: " + message });
+    return res.status(500).json({ error: + message });
   }
 }
 
@@ -80,17 +76,19 @@ export async function login(req: Request, res: Response) {
     return res.status(200).json({ message: 'Login realizado com sucesso!' });
   } catch (error: unknown) {
     const message = getErrorMessage(error);
-    return res.status(401).json({ error: "Erro ao efetuar o login. Tente novamente mais tarde: " + message });
+    return res.status(401).json({ error: message });
   }
 }
 
 export async function logout(req: Request, res: Response) {
   try {
+    await authService.logout();
     clearAuthCookies(res);
-     return res.status(200).json({ message: 'Logout realizado com sucesso!' });
+    return res.status(200).json({ message: 'Logout realizado com sucesso!' });
   } catch (error: unknown) {
-    const message = getErrorMessage(error);
-     return res.status(500).json({ error: "Erro ao fazer o logout. Tente novamente mais tarde: " + message });
+    const message = getErrorMessage(error)
+    clearAuthCookies(res);
+    return res.status(503).json({error: message});
   }
 }
 
@@ -98,24 +96,40 @@ export async function getSession(req: Request, res: Response) {
   const accessToken = req.cookies['sb-access-token'];
   const refreshToken = req.cookies['sb-refresh-token'];
   let user = null;
+
   if (accessToken) {
     try {
       user = await authService.getUserByToken(accessToken);
-    } catch (error) {
+    } catch (error: unknown) {
+      const message = getErrorMessage(error);
+
+      if (message.startsWith('SERVER_ERROR')) {
+        const userMessage = message.split(':')[1] || 'Ocorreu um erro interno.';
+        return res.status(500).json({ error: userMessage });
+      }
       user = null;
     }
   }
+
   if (!user && refreshToken) {
     try {
-      const { access_token: newAccessToken, access_token_expiry } = await authService.refreshAccessToken(refreshToken);
-      res.setHeader('Set-Cookie', createCookie('sb-access-token', newAccessToken, access_token_expiry));
-      user = await authService.getUserByToken(newAccessToken);
-    } catch (error: unknown) {
+      const { newAccessToken, accessTokenExpiry } = await authService.refreshAccessToken(refreshToken);
+      const refreshedUser = await authService.getUserByToken(newAccessToken);
+      res.setHeader('Set-Cookie', createCookie('sb-access-token', newAccessToken, accessTokenExpiry));
+      user = refreshedUser;
+    } catch (refreshError: unknown) {
       clearAuthCookies(res);
-      const message = getErrorMessage(error);
-      return res.status(401).json({ error: "Erro de autenticação." + message });
+      const originalRefreshMessage = getErrorMessage(refreshError);
+      
+      if (originalRefreshMessage.startsWith('INVALID_REFRESH_TOKEN')) {
+        const userMessage = originalRefreshMessage.split(':')[1] || 'Sua sessão expirou. Faça login novamente.';
+        return res.status(401).json({ error: userMessage });
+      } else {
+        return res.status(500).json({ error: 'Não foi possível renovar a sessão no momento. Tente novamente mais tarde.' });
+      }
     }
   }
+
   if (user) {
     return res.status(200).json(user);
   } else {
@@ -141,7 +155,19 @@ export async function changePassword(req: Request, res: Response) {
     return res.status(200).json(result);
   } catch (error: unknown) {
     const message = getErrorMessage(error);
-    return res.status(500).json({ error: "erro ao tentar mudar de senha. Tente novamente mais tarde: " + message });
+
+    if (message.startsWith('INVALID_TOKEN')) {
+      const userMessage = message.split(':')[1] || 'Token inválido ou expirado.';
+      return res.status(401).json({ error: userMessage });
+    }
+
+    if (message.startsWith('WEAK_PASSWORD')) {
+      const userMessage = message.split(':')[1] || 'A senha não atende aos requisitos.';
+      return res.status(400).json({ error: userMessage });
+    }
+    else {
+      return res.status(500).json({ error: message });
+    }
   }
 }
 
@@ -157,6 +183,10 @@ export async function sendRecoveryEmail(req: Request, res: Response) {
     return res.status(200).json(result);
   } catch (error: unknown) {
     const message = getErrorMessage(error);
-    return res.status(500).json({ error: "Erro ao tentar enviar o email. Tente novamente mais tarde: " + message });
+
+    if (message.includes('Muitas tentativas')) {
+      return res.status(429).json({ error: message });
+    }
+    return res.status(500).json({ error: message });
   }
 }

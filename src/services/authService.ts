@@ -1,4 +1,5 @@
 import { supabase, supabaseAdmin } from '../config/supabase';
+import { AuthApiError } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { RegisterOptions, RecoveryOptions } from '../types/auth';
 
@@ -44,8 +45,15 @@ export async function login(email: string, password: string, keepLogged: boolean
     password,
   });
 
-  if (error || !data.session) {
-    throw new Error(error?.message || 'Erro no login');
+  if (error) {
+    if (error instanceof AuthApiError && error.message === 'Invalid login credentials') {
+      throw new Error('Email ou senha inválidos.');
+    }
+    throw error;
+  }
+
+  if (!data.session) {
+    throw new Error('Não foi possível criar uma sessão.');
   }
 
   const userId = data.user?.id;
@@ -70,26 +78,26 @@ export async function login(email: string, password: string, keepLogged: boolean
 export async function logout() {
   const { error } = await supabase.auth.signOut();
   if (error) {
-    throw new Error(error.message);
+    throw new Error('Você foi desconectado deste dispositivo, mas não foi possível encerrar a sessão no servidor. Sua sessão pode continuar ativa em outros dispositivos.');
   }
   return { message: 'Logout realizado com sucesso!' };
 }
 
 export async function getUserByToken(token: string) {
   const { data: authData, error } = await supabase.auth.getUser(token);
-  if (error) {
-    throw new Error('Token inválido ou expirado');
+
+  if (error || !authData.user) {
+    throw new Error('INVALID_ACCESS_TOKEN:Token de acesso inválido ou expirado.');
   }
   const user = authData.user;
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('username')
-    .eq('id', user.id)  
-    .single();         
+    .eq('id', user.id)
+    .single();
 
   if (profileError) {
-    console.error('Erro ao buscar perfil do usuário:', profileError.message);
-    return user; 
+    throw new Error('SERVER_ERROR:Não foi possível carregar os dados do perfil.');
   }
   return { ...user, username: profile.username };
 }
@@ -100,12 +108,13 @@ export async function refreshAccessToken(refreshToken: string) {
   });
 
   if (error || !data.session) {
-    throw new Error('Não foi possível atualizar o token de acesso.');
+    throw new Error('INVALID_REFRESH_TOKEN:Sua sessão expirou. Por favor, faça o login novamente.');
   }
 
   return {
-    access_token: data.session.access_token,
-    access_token_expiry: ONE_HOUR,
+    newAccessToken: data.session.access_token,
+    user: data.session.user,
+    accessTokenExpiry: ONE_HOUR, 
   };
 }
 
@@ -113,7 +122,7 @@ export async function updatePasswordWithToken(accessToken: string, newPassword: 
   const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
 
   if (userError || !user) {
-    throw new Error('Token de recuperação inválido ou expirado.');
+    throw new Error('INVALID_TOKEN:Token de recuperação inválido ou expirado.');
   }
 
   const { error: adminError } = await supabaseAdmin.auth.admin.updateUserById(
@@ -122,6 +131,9 @@ export async function updatePasswordWithToken(accessToken: string, newPassword: 
   );
 
   if (adminError) {
+    if (adminError.message.toLowerCase().includes('password')) {
+       throw new Error(`WEAK_PASSWORD:${adminError.message}`);
+    }
     throw new Error('Não foi possível atualizar a senha. Por favor, tente novamente.');
   }
 
@@ -136,8 +148,11 @@ export async function sendRecoveryEmail(email: string, options?: RecoveryOptions
   });
 
   if (error) {
-    throw new Error('Erro ao enviar e-mail de recuperação');
+    if (error instanceof AuthApiError && error.status === 429) {
+      throw new Error('Você realizou muitas tentativas. Por favor, aguarde um momento antes de tentar novamente.');
+    }
+    throw new Error('Não foi possível processar sua solicitação no momento.');
   }
 
-  return { message: 'Link de recuperação enviado com sucesso!' };
+  return { message: 'Se uma conta com este e-mail existir, um link para redefinição de senha foi enviado.' };
 }
