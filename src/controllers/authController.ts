@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import * as authService from '../services/authService';
 import * as cookie from 'cookie';
+import { supabase } from '../config/supabase';
 
 const createCookie = (name: string, value: string, maxAge: number): string => {
   return cookie.serialize(name, value, {
@@ -19,13 +20,40 @@ const clearAuthCookies = (res: Response) => {
   ]);
 };
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
 export async function register(req: Request, res: Response) {
   try {
     const { username, email, password, options } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({ error: "Todos os campos são obrigatórios." });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: "A senha deve ter no mínimo 6 caracteres." });
+    }
+
+    const { data: existingUsername } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('username', username)
+      .single();
+
+    if (existingUsername) {
+      return res.status(409).json({ error: "Este nome de usuário já está em uso." });
+    }
+
     const result = await authService.register(username, email, password, options);
-    res.status(201).json(result);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    return res.status(201).json(result);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    if (message.includes("User already registered")) {
+       return res.status(409).json({ error: "Este e-mail já está em uso." });
+    }
+    return res.status(500).json({ error: "Erro ao registrar usuário. Tente novamente mais tarde: " + message });
   }
 }
 
@@ -49,18 +77,20 @@ export async function login(req: Request, res: Response) {
       );
     }
     res.setHeader('Set-Cookie', cookiesToSet);
-    res.status(200).json({ message: 'Login realizado com sucesso!' });
-  } catch (error: any) {
-    res.status(401).json({ error: error.message });
+    return res.status(200).json({ message: 'Login realizado com sucesso!' });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return res.status(401).json({ error: "Erro ao efetuar o login. Tente novamente mais tarde: " + message });
   }
 }
 
 export async function logout(req: Request, res: Response) {
   try {
     clearAuthCookies(res);
-    res.status(200).json({ message: 'Logout realizado com sucesso!' });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+     return res.status(200).json({ message: 'Logout realizado com sucesso!' });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+     return res.status(500).json({ error: "Erro ao fazer o logout. Tente novamente mais tarde: " + message });
   }
 }
 
@@ -80,16 +110,17 @@ export async function getSession(req: Request, res: Response) {
       const { access_token: newAccessToken, access_token_expiry } = await authService.refreshAccessToken(refreshToken);
       res.setHeader('Set-Cookie', createCookie('sb-access-token', newAccessToken, access_token_expiry));
       user = await authService.getUserByToken(newAccessToken);
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearAuthCookies(res);
-      res.status(401).json({ error: error.message });
+      const message = getErrorMessage(error);
+      return res.status(401).json({ error: "Erro de autenticação." + message });
     }
   }
   if (user) {
-    res.status(200).json(user);
+    return res.status(200).json(user);
   } else {
     clearAuthCookies(res);
-    res.status(401).json({ error: 'Nenhuma sessão ativa encontrada.' });
+    return res.status(401).json({ error: 'Nenhuma sessão ativa encontrada.' });
   }
 }
 
@@ -108,10 +139,9 @@ export async function changePassword(req: Request, res: Response) {
 
     const result = await authService.updatePasswordWithToken(token, newPassword);
     return res.status(200).json(result);
-
-  } catch (error: any) {
-    console.error('Erro ao atualizar a senha:', error);
-    return res.status(500).json({ error: error.message || 'Erro interno do servidor.' });
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return res.status(500).json({ error: "erro ao tentar mudar de senha. Tente novamente mais tarde: " + message });
   }
 }
 
@@ -119,14 +149,14 @@ export async function sendRecoveryEmail(req: Request, res: Response) {
   const { email } = req.body;
 
   if (!email) {
-    res.status(400).json({ error: "E-mail é obrigatório." });
+    return res.status(400).json({ error: "E-mail é obrigatório." });
   }
 
   try {
     const result = await authService.sendRecoveryEmail(email);
-    res.status(200).json(result);
-  } catch (error: any) {
-    console.error({ error: error.message });
-    res.status(500).json({ error: error.message });
+    return res.status(200).json(result);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return res.status(500).json({ error: "Erro ao tentar enviar o email. Tente novamente mais tarde: " + message });
   }
 }

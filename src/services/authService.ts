@@ -21,12 +21,19 @@ export async function register(
     },
   });
 
-  if (data.user) {
-    await supabase.from('profiles').insert({ id: data.user.id, username });
+  if (!data.user) {
+    throw new Error("O registro foi bem-sucedido, mas o usuário não foi retornado.");
   }
   if (error) {
-    console.error('Erro ao registrar usuário:', error);
-    throw new Error(error.message);
+    throw error;
+  }
+  
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .insert({ id: data.user.id, username });
+
+  if (profileError) {
+    throw new Error(`O email já está em uso`);
   }
   return { message: 'Usuário registrado com sucesso!',}
 }
@@ -103,24 +110,18 @@ export async function refreshAccessToken(refreshToken: string) {
 }
 
 export async function updatePasswordWithToken(accessToken: string, newPassword: string) {
-  // 1. PRIMEIRO, usamos o cliente PADRÃO para validar o token de acesso
-  // e obter os dados do usuário. Isso confirma que o token é válido.
   const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
 
   if (userError || !user) {
-    console.error('Falha ao validar o token de recuperação:', userError);
     throw new Error('Token de recuperação inválido ou expirado.');
   }
 
-  // 2. AGORA, usamos o cliente de ADMINISTRAÇÃO para atualizar a senha do usuário
-  // usando o ID que obtivemos no passo anterior.
   const { error: adminError } = await supabaseAdmin.auth.admin.updateUserById(
     user.id,
     { password: newPassword }
   );
 
   if (adminError) {
-    console.error('Erro do Admin Client ao atualizar a senha:', adminError);
     throw new Error('Não foi possível atualizar a senha. Por favor, tente novamente.');
   }
 
@@ -135,8 +136,7 @@ export async function sendRecoveryEmail(email: string, options?: RecoveryOptions
   });
 
   if (error) {
-    console.error('Erro ao enviar e-mail de recuperação:', error);
-    throw new Error(error.message);
+    throw new Error('Erro ao enviar e-mail de recuperação');
   }
 
   return { message: 'Link de recuperação enviado com sucesso!' };
