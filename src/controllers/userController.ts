@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import * as userService from '../services/userService';
-import { AuthenticatedRequest } from '../types/onlineUser';
+import { AuthenticatedRequest } from '../types/auth';
 
 export async function GetLastRegistration (req: Request, res: Response) {
   try {

@@ -1,6 +1,6 @@
 import { Response, NextFunction } from "express";
 import * as authService from "../services/authService";
-import { AuthenticatedRequest } from "../types/onlineUser";
+import { AuthenticatedRequest } from "../types/auth";
 import { getErrorMessage } from "../helpers/Message";
 
 export async function authenticateUser(req: AuthenticatedRequest, res: Response, next: NextFunction) {
@@ -14,7 +14,7 @@ export async function authenticateUser(req: AuthenticatedRequest, res: Response,
     req.user = user;
     next();
     
-  } catch (error: unknown) { 
+  } catch (error: unknown) {
     const message = getErrorMessage(error);
 
     if (message.startsWith('SERVER_ERROR')) {

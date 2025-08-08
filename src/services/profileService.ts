@@ -9,59 +9,78 @@ Pick<
   UserProfileData,
   'username' | 'gender' | 'birthdate' | 'location' | 'website' | 'joined_at' | 'last_login' | 'total_posts' | 'role'
 >> {
-const { data, error } = await supabase
+  const { data, error } = await supabase
   .from('profiles')
   .select('username, gender, birthdate, location, website, joined_at, last_login, total_posts, role')
   .eq('id', id)
   .single();
+  
 if (error) {
-  console.error('Erro ao buscar perfil:', error.message);
-  throw new Error('Erro ao buscar perfil do usuário.');
+  if (error.code === 'PGRST116') { 
+    throw new Error('NOT_FOUND:O perfil com este ID não foi encontrado.');
+  }
+  throw new Error('Ocorreu um erro ao buscar os dados do perfil.');
 }
+
 return data;
 }
 
 export async function updateProfile(
   profile: Partial<UserProfileData> & { id: string }
 ) {
-  const { id } = profile;
-
+  const { id, ...profileData } = profile;
   const allowedFields = ['username', 'website', 'gender', 'birthdate', 'location'] as const;
 
-  const fieldsToUpdate: Partial<Record<typeof allowedFields[number], string | null>> = Object.fromEntries(
-    Object.entries(profile).filter(([key, value]) =>
-      allowedFields.includes(key as typeof allowedFields[number])
-    )
-  );
+  const fieldsToUpdate: Partial<Record<typeof allowedFields[number], string | null>> = {};
+  for (const key of allowedFields) {
+    if (key in profileData) {
+      fieldsToUpdate[key] = profileData[key];
+    }
+  }
+
   if (fieldsToUpdate.birthdate === "") {
     fieldsToUpdate.birthdate = null;
   }
 
   if (Object.keys(fieldsToUpdate).length === 0) {
-    throw new Error('Nenhum campo válido para atualizar.');
+    throw new Error('BAD_REQUEST:Nenhum campo válido para atualização foi fornecido.');
   }
 
   const { data, error } = await supabase
     .from('profiles')
     .update(fieldsToUpdate)
-    .eq('id', id);
+    .eq('id', id)
+    .select()
+    .single()
 
   if (error) {
-    console.error('Erro ao atualizar perfil:', error.message);
+    if (error.code === '23505') {
+      throw new Error('CONFLICT:Este nome de usuário já está em uso. Por favor, escolha outro.');
+    }
     throw new Error('Erro ao salvar perfil do usuário.');
   }
 
-  return { message: 'Perfil atualizado com sucesso!', data };
+  if (!data) {
+    throw new Error('NOT_FOUND:O perfil que você tentou atualizar não foi encontrado.');
+  }
+
+  return { message: 'Perfil atualizado com sucesso!' };
 }
 
 export async function DeleteProfile(id: string): Promise<{ message: string }> {
-  const { error } = await supabase
+
+  const { data, error } = await supabase
     .from('profiles')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .select();
+
   if (error) {
-    console.error('Erro ao deletar perfil:', error.message);
-    throw new Error('Erro ao deletar perfil do usuário.');
+    throw new Error('Ocorreu um erro ao tentar deletar o perfil.');
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error('NOT_FOUND:O perfil que você tentou deletar não foi encontrado.');
   }
 
   return { message: 'Perfil deletado com sucesso!' };
@@ -74,9 +93,17 @@ export async function getUserProfileByUsername(username: string): Promise<UserPr
     .eq('username', username)
     .single();
 
-  if (error || !data) {
-    throw new Error('Usuário não encontrado.');
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      throw new Error('NOT_FOUND:Usuário com este nome não foi encontrado.');
+    }
+    throw new Error('Ocorreu um erro ao buscar o perfil.');
   }
 
+  if (!data) {
+    throw new Error('NOT_FOUND:Usuário com este nome não foi encontrado.');
+  }
+  
   return data;
 }
