@@ -164,8 +164,7 @@ export async function changePassword(req: Request, res: Response) {
     if (message.startsWith('WEAK_PASSWORD')) {
       const userMessage = message.split(':')[1] || 'A senha não atende aos requisitos.';
       return res.status(400).json({ error: userMessage });
-    }
-    else {
+    } else {
       return res.status(500).json({ error: message });
     }
   }

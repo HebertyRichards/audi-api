@@ -14,8 +14,7 @@ export async function getProfile(req: Request, res: Response) {
     if (message.startsWith('NOT_FOUND')) {
       const userMessage = message.split(':')[1] || 'Perfil não encontrado.';
       return res.status(404).json({ error: userMessage });
-    }
-    else {
+    } else {
       return res.status(500).json({ error: message });
     }
   }
@@ -61,8 +60,7 @@ export async function deleteUserProfile(req: Request, res: Response) {
     if (message.startsWith('NOT_FOUND')) {
       const userMessage = message.split(':')[1] || 'Perfil não encontrado.';
       return res.status(404).json({ error: userMessage });
-    }
-    else {
+    } else {
       return res.status(500).json({ error: message });
     }
   }
@@ -79,8 +77,7 @@ export async function getUserProfile(req: Request, res: Response) {
     if (message.startsWith('NOT_FOUND')) {
       const userMessage = message.split(':')[1] || 'Usuário não encontrado.';
       return res.status(404).json({ error: userMessage });
-    }
-    else {
+    } else {
       return res.status(500).json({ error: message });
     }
   }
