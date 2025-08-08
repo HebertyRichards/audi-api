@@ -13,11 +13,17 @@ export async function getLastRegistrationUser(): Promise<UserProfileData | null>
     .single();
 
   if (error) {
-    console.error('Erro ao buscar o último registro:', error.message);
-    throw new Error('Erro ao buscar o último registro.');
+    if (error.code === 'PGRST116') {
+      throw new Error('NOT_FOUND:Nenhum usuário registrado foi encontrado.');
+    }
+    throw new Error('Ocorreu um erro ao buscar o último registro.');
   }
 
-  return data || null;
+  if (!data) {
+    throw new Error('NOT_FOUND:Nenhum usuário registrado foi encontrado.');
+  }
+
+  return data;
 }
 
 export async function upsertOnlineUser(userId: string) {
@@ -25,10 +31,8 @@ export async function upsertOnlineUser(userId: string) {
     .from("online_users")
     .upsert([{ user_id: userId, last_seen_at: new Date().toISOString() }])
     .select('last_seen_at');
-
   if (error) {
-    console.error("Erro inexperado:", error.message);
-    throw new Error("Erro ao atualizar status online.");
+    throw new Error("Não foi possível atualizar o status online");
   }
 
   return data;
@@ -41,7 +45,6 @@ export async function getOnlineUsers() {
     .gt("last_seen_at", new Date(Date.now() - 2 * 60 * 1000).toISOString());
 
   if (error) {
-    console.error("Erro ao listar usuários online:", error.message);
     throw new Error("Erro ao buscar usuários online.");
   }
 
