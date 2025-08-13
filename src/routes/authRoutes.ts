@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as authController from '../controllers/authController';
+import { authenticateUser } from '../middlewares/authMiddleware';
 
 const router = Router();
 
@@ -8,6 +9,6 @@ router.post('/login', authController.login);
 router.post('/logout', authController.logout);
 router.put('/change-password',authController.changePassword)
 router.post('/forgot-password', authController.sendRecoveryEmail)
-router.get('/session', authController.getSession);
+router.get('/session', authenticateUser, authController.getSession);
 
 export default router;
