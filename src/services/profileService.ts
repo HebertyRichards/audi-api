@@ -7,11 +7,11 @@ dotenv.config();
 export async function getProfileById(id: string): Promise<
 Pick<
   UserProfileData,
-  'username' | 'gender' | 'birthdate' | 'location' | 'website' | 'joined_at' | 'last_login' | 'total_posts' | 'role'
+  'username' | 'gender' | 'birthdate' | 'location' | 'website' | 'joined_at' | 'last_login' | 'total_posts' | 'role' | 'facebook' | 'instagram' | 'discord' | 'steam'
 >> {
   const { data, error } = await supabase
   .from('profiles')
-  .select('username, gender, birthdate, location, website, joined_at, last_login, total_posts, role')
+  .select('username, gender, birthdate, location, website, joined_at, last_login, total_posts, role, facebook, instagram, discord, steam')
   .eq('id', id)
   .single();
   
@@ -29,7 +29,7 @@ export async function updateProfile(
   profile: Partial<UserProfileData> & { id: string }
 ) {
   const { id, ...profileData } = profile;
-  const allowedFields = ['username', 'website', 'gender', 'birthdate', 'location'] as const;
+  const allowedFields = ['username', 'website', 'gender', 'birthdate', 'location', 'facebook', 'instagram', 'discord', 'steam'] as const;
 
   const fieldsToUpdate: Partial<Record<typeof allowedFields[number], string | null>> = {};
   for (const key of allowedFields) {
@@ -89,7 +89,7 @@ export async function DeleteProfile(id: string): Promise<{ message: string }> {
 export async function getUserProfileByUsername(username: string): Promise<UserProfileWithoutId> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('username, gender, birthdate, location, website, joined_at, last_login, total_posts, role')
+    .select('username, gender, birthdate, location, website, joined_at, last_login, total_posts, role, facebook, instagram, discord, steam')
     .eq('username', username)
     .single();
 
