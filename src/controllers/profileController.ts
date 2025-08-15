@@ -22,14 +22,16 @@ export async function getProfile(req: Request, res: Response) {
 
 export async function getAllUsers(req: Request, res: Response) {
   try {
-    const users = await profileService.getAllProfiles();
-    res.status(200).json(users);
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const result = await profileService.getAllProfiles(page, limit);
+    res.status(200).json(result);
   } catch (error: unknown) {
-const message = getErrorMessage(error)
+    const message = getErrorMessage(error)
     if (message.startsWith('NOT_FOUND')) {
       return res.status(404).json({ error: message.split(':')[1] });
     } else {
-    return res.status(500).json({ message: message });
+      return res.status(500).json({ message: message });
     }
   }
 }

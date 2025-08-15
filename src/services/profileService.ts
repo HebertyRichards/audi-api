@@ -25,19 +25,32 @@ if (error) {
 return data;
 }
 
-export async function getAllProfiles(): Promise<Partial<UserProfileData>[]> {
+export async function getAllProfiles(page: number, limit: number): Promise<{ data: Partial<UserProfileData>[]; totalCount: number }> {
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+  const { count, error: countError } = await supabase
+    .from('profiles')
+    .select('*', { count: 'exact', head: true });
+
+  if (countError) {
+    throw new Error('Ocorreu um erro ao contar os usuários.');
+  }
+
   const { data, error } = await supabase
     .from('profiles')
-    .select('username, role, joined_at, last_login'); 
+    .select('username, role, joined_at, last_login')
+    .range(from, to); 
   if (error) {
     throw new Error('Ocorreu um erro ao buscar a lista de usuários.');
   }
 
   if (!data || data.length === 0) {
-    throw new Error('NOT_FOUND:Nenhum usuário foi encontrado.');
+    if (page === 1) {
+       throw new Error('NOT_FOUND:Nenhum usuário foi encontrado.');
+    }
   }
 
-  return data;
+  return { data, totalCount: count ?? 0 };
 }
 
 export async function updateProfile(
