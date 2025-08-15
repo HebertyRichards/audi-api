@@ -5,6 +5,7 @@ import { authenticateUser } from "../middlewares/authMiddleware"
 
 const router = Router();
 
+router.get('/user/all', profileController.getAllUsers)
 router.get('/:id', profileController.getProfile);
 router.put('/update', authenticateUser, profileController.updateUserProfile);
 router.delete('/:id',authenticateUser, profileController.deleteUserProfile);

@@ -25,6 +25,21 @@ if (error) {
 return data;
 }
 
+export async function getAllProfiles(): Promise<Partial<UserProfileData>[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('username, role, joined_at, last_login'); 
+  if (error) {
+    throw new Error('Ocorreu um erro ao buscar a lista de usuários.');
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error('NOT_FOUND:Nenhum usuário foi encontrado.');
+  }
+
+  return data;
+}
+
 export async function updateProfile(
   profile: Partial<UserProfileData> & { id: string }
 ) {
