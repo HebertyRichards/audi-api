@@ -1,4 +1,4 @@
-import { supabase }from '../config/supabase';
+import { supabase, supabaseAdmin ,createAuthenticatedClient }from '../config/supabase';
 import dotenv from 'dotenv';
 import { UserProfileData, UserProfileWithoutId } from '../types/user';
 
@@ -7,11 +7,11 @@ dotenv.config();
 export async function getProfileById(id: string): Promise<
 Pick<
   UserProfileData,
-  'username' | 'gender' | 'birthdate' | 'location' | 'website' | 'joined_at' | 'last_login' | 'total_posts' | 'role' | 'facebook' | 'instagram' | 'discord' | 'steam'
+  'username' | 'gender' | 'birthdate' | 'location' | 'website' | 'joined_at' | 'last_login' | 'total_posts' | 'role' | 'facebook' | 'instagram' | 'discord' | 'steam' | 'avatar_url'
 >> {
   const { data, error } = await supabase
   .from('profiles')
-  .select('username, gender, birthdate, location, website, joined_at, last_login, total_posts, role, facebook, instagram, discord, steam')
+  .select('username, gender, birthdate, location, website, joined_at, last_login, total_posts, role, facebook, instagram, discord, steam, avatar_url')
   .eq('id', id)
   .single();
   
@@ -38,7 +38,7 @@ export async function getAllProfiles(page: number, limit: number): Promise<{ dat
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('username, role, joined_at, last_login')
+    .select('username, role, joined_at, last_login, avatar_url')
     .range(from, to); 
   if (error) {
     throw new Error('Ocorreu um erro ao buscar a lista de usuários.');
@@ -117,7 +117,7 @@ export async function DeleteProfile(id: string): Promise<{ message: string }> {
 export async function getUserProfileByUsername(username: string): Promise<UserProfileWithoutId> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('username, gender, birthdate, location, website, joined_at, last_login, total_posts, role, facebook, instagram, discord, steam')
+    .select('username, gender, birthdate, location, website, joined_at, last_login, total_posts, role, facebook, instagram, discord, steam, avatar_url')
     .eq('username', username)
     .single();
 
@@ -134,4 +134,54 @@ export async function getUserProfileByUsername(username: string): Promise<UserPr
   }
   
   return data;
+}
+
+export async function updateAvatar(userId: string, avatarFile: Express.Multer.File, token: string) {
+  if (!avatarFile) {
+    throw new Error('BAD_REQUEST:Nenhum arquivo de avatar foi enviado.');
+  }
+  const supabaseAutenticado = createAuthenticatedClient(token);
+  const { data: profileData } = await supabaseAdmin
+    .from('profiles')
+    .select('avatar_url')
+    .eq('id', userId)
+    .single();
+
+  if (profileData?.avatar_url) {
+    const oldFileName = profileData.avatar_url.split('/').pop()?.split('?')[0];
+    if (oldFileName) {
+      await supabaseAdmin.storage.from('avatars').remove([`avatars/${oldFileName}`]);
+    }
+  }
+
+  const fileExtension = avatarFile.originalname.split('.').pop();
+  const fileName = `${userId}.${fileExtension}`;
+  const filePath = `avatars/${fileName}`;
+  const { error: uploadError } = await supabaseAutenticado.storage
+    .from('avatars')
+    .upload(filePath, avatarFile.buffer, {
+      contentType: avatarFile.mimetype,
+      upsert: true,
+    });
+
+  if (uploadError) {
+    throw new Error(`Erro no Supabase Storage: ${uploadError.message}`);
+  }
+
+  const { data: urlData } = supabaseAutenticado.storage
+    .from('avatars')
+    .getPublicUrl(filePath);
+  const avatarUrl = `${urlData.publicUrl}?t=${new Date().getTime()}`;
+  const { data, error: updateError } = await supabaseAutenticado
+    .from('profiles')
+    .update({ avatar_url: avatarUrl })
+    .eq('id', userId)
+    .select('avatar_url')
+    .single();
+
+  if (updateError) {
+    throw new Error(`Erro ao salvar a URL do avatar no perfil: ${updateError.message}`);
+  }
+
+  return { message: 'Avatar atualizado com sucesso!', avatar_url: data.avatar_url };
 }

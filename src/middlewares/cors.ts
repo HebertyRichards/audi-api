@@ -4,6 +4,6 @@ import dotenv from 'dotenv';
 dotenv.config();
 export const corsMiddleware = cors({
   origin: process.env.FRONTEND_URL,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   credentials: true,
 });
