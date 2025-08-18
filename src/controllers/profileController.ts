@@ -98,3 +98,34 @@ export async function getUserProfile(req: Request, res: Response) {
     }
   }
 }
+
+export async function updateAvatarProfile(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Usuário não autenticado." });
+    }
+    const token = req.cookies['sb-access-token'];
+
+    if (!token) {
+        return res.status(401).json({ error: "Token de sessão não encontrado." });
+    }
+    const userId = req.user.id;
+    const avatarFile = req.file;
+
+    if (!avatarFile) {
+      return res.status(400).json({ error: "Nenhum arquivo enviado." });
+    }
+    const result = await profileService.updateAvatar(userId, avatarFile, token);
+    return res.status(200).json(result);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    if (message.startsWith('BAD_REQUEST')) {
+      return res.status(400).json({ error: message.split(':')[1] });
+    }
+    if (message.startsWith('NOT_FOUND')) {
+      return res.status(404).json({ error: message.split(':')[1] });
+    } else {
+      next(error); 
+    }
+  }
+}

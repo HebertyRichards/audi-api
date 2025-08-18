@@ -13,6 +13,7 @@ export interface UserProfileData {
     last_login?: string;
     total_posts?: number;
     role?: string;
+    avatar_url?: string;
   }
 
   export interface UserProfileWithoutId {
