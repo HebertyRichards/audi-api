@@ -185,3 +185,41 @@ export async function updateAvatar(userId: string, avatarFile: Express.Multer.Fi
 
   return { message: 'Avatar atualizado com sucesso!', avatar_url: data.avatar_url };
 }
+
+export async function deleteAvatar(userId: string) {
+  const { data: profileData, error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .select('avatar_url')
+    .eq('id', userId)
+    .single();
+
+  if (profileError || !profileData) {
+    throw new Error('NOT_FOUND:Perfil do usuário não encontrado.');
+  }
+
+  if (profileData.avatar_url) {
+    const oldFileName = profileData.avatar_url.split('/').pop()?.split('?')[0];
+    if (oldFileName) {
+      const { error: storageError } = await supabaseAdmin.storage
+        .from('avatars')
+        .remove([`avatars/${oldFileName}`]);
+      if (storageError) {
+        throw new Error('Falha ao remover o arquivo do storage:');
+      }
+    }
+  } else {
+    return { message: 'Nenhum avatar para remover.', avatar_url: null };
+  }
+  const { data, error: updateError } = await supabase
+    .from('profiles')
+    .update({ avatar_url: null })
+    .eq('id', userId)
+    .select('avatar_url')
+    .single();
+
+  if (updateError) {
+    throw new Error(`Erro ao limpar a URL do avatar no perfil: ${updateError.message}`);
+  }
+
+  return { message: 'Avatar removido com sucesso!', avatar_url: data.avatar_url };
+}
