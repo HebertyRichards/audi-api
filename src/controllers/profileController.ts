@@ -129,3 +129,24 @@ export async function updateAvatarProfile(req: AuthenticatedRequest, res: Respon
     }
   }
 }
+
+export async function deleteAvatarProfile(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Usuário não autenticado." });
+    }
+    const userId = req.user.id;
+    const result = await profileService.deleteAvatar(userId);
+    return res.status(200).json(result);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    if (message.startsWith('BAD_REQUEST')) {
+      return res.status(400).json({ error: message.split(':')[1] });
+    }
+    if (message.startsWith('NOT_FOUND')) {
+      return res.status(404).json({ error: message.split(':')[1] });
+    } else {
+      next(error); 
+    }
+  }
+}

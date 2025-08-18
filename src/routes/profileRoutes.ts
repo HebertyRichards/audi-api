@@ -18,5 +18,10 @@ router.patch(
     upload.single('avatar'), 
     profileController.updateAvatarProfile
   );
+  router.delete(
+    '/user/avatar',
+    authenticateUser,
+    profileController.deleteAvatarProfile 
+);
 
 export default router;
