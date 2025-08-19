@@ -7,11 +7,11 @@ dotenv.config();
 export async function getProfileById(id: string): Promise<
 Pick<
   UserProfileData,
-  'username' | 'gender' | 'birthdate' | 'location' | 'website' | 'joined_at' | 'last_login' | 'total_posts' | 'role' | 'facebook' | 'instagram' | 'discord' | 'steam' | 'avatar_url'
+  'username' | 'gender' | 'birthdate' | 'location' | 'website' | 'joined_at' | 'last_login' | 'total_posts' | 'role' | 'facebook' | 'instagram' | 'discord' | 'steam' | 'avatar_url' | 'followers_count' | 'following_count'
 >> {
   const { data, error } = await supabase
   .from('profiles')
-  .select('username, gender, birthdate, location, website, joined_at, last_login, total_posts, role, facebook, instagram, discord, steam, avatar_url')
+  .select('id, username, gender, birthdate, location, website, joined_at, last_login, total_posts, role, facebook, instagram, discord, steam, avatar_url')
   .eq('id', id)
   .single();
   
@@ -117,7 +117,7 @@ export async function DeleteProfile(id: string): Promise<{ message: string }> {
 export async function getUserProfileByUsername(username: string): Promise<UserProfileWithoutId> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('username, gender, birthdate, location, website, joined_at, last_login, total_posts, role, facebook, instagram, discord, steam, avatar_url')
+    .select('id, username, gender, birthdate, location, website, joined_at, last_login, total_posts, role, facebook, instagram, discord, steam, avatar_url, followers_count, following_count')
     .eq('username', username)
     .single();
 
@@ -222,4 +222,101 @@ export async function deleteAvatar(userId: string) {
   }
 
   return { message: 'Avatar removido com sucesso!', avatar_url: data.avatar_url };
+}
+
+export async function followUser(followerId: string, followingId: string) {
+  if (followerId === followingId) {
+    throw new Error('BAD_REQUEST:Você não pode seguir a si mesmo.');
+  }
+
+  const { error } = await supabase.rpc('handle_follow', {
+    follower_uuid: followerId,
+    following_uuid: followingId,
+  });
+
+  if (error) {
+    if (error.code === '23505') { 
+      throw new Error('CONFLICT:Você já está seguindo este usuário.');
+    }
+    console.error('Erro ao seguir usuário:', error);
+    throw new Error('Não foi possível completar a ação de seguir.');
+  }
+
+  return { message: 'Usuário seguido com sucesso!' };
+}
+
+export async function unfollowUser(followerId: string, followingId: string) {
+    if (followerId === followingId) {
+    throw new Error('BAD_REQUEST:Você não pode deixar de seguir a si mesmo.');
+  }
+
+  const { data: followExists, error: checkError } = await supabase
+    .from('followers')
+    .select('*')
+    .eq('follower_id', followerId)
+    .eq('following_id', followingId)
+    .maybeSingle();
+
+  if (checkError) {
+      console.error('Erro ao verificar se segue:', checkError);
+      throw new Error('Ocorreu um erro ao tentar deixar de seguir.');
+  }
+
+  if (!followExists) {
+      throw new Error('NOT_FOUND:Você não está seguindo este usuário.');
+  }
+
+  const { error: rpcError } = await supabase.rpc('handle_unfollow', {
+    follower_uuid: followerId,
+    following_uuid: followingId,
+  });
+
+  if (rpcError) {
+    console.error('Erro ao deixar de seguir usuário:', rpcError);
+    throw new Error('Não foi possível completar a ação de deixar de seguir.');
+  }
+
+  return { message: 'Você deixou de seguir o usuário.' };
+}
+
+export async function getFollowStats(userId: string) {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('followers_count, following_count')
+        .eq('id', userId)
+        .single();
+
+    if (error || !data) {
+        throw new Error('NOT_FOUND:Usuário não encontrado.');
+    }
+
+    return data;
+}
+
+export async function getFollowers(userId: string) {
+  const { data, error } = await supabase
+      .from('followers')
+      .select('follower:profiles!followers_follower_id_fkey(id, username, avatar_url)')
+      .eq('following_id', userId);
+  
+  if (error) {
+      console.error('Supabase getFollowers error:', error); 
+      throw new Error('Erro ao buscar seguidores.');
+  }
+
+  return data.map(item => item.follower);
+}
+
+export async function getFollowing(userId: string) {
+  const { data, error } = await supabase
+      .from('followers')
+      .select('following:profiles!followers_following_id_fkey(id, username, avatar_url)')
+      .eq('follower_id', userId);
+
+  if (error) {
+      console.error('Supabase getFollowing error:', error);
+      throw new Error('Erro ao buscar usuários que você segue.');
+  }
+
+  return data.map(item => item.following);
 }

@@ -150,3 +150,74 @@ export async function deleteAvatarProfile(req: AuthenticatedRequest, res: Respon
     }
   }
 }
+
+export async function follow(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Usuário não autenticado." });
+    }
+    const followerId = req.user.id;
+    const followingId = req.params.id;
+    const result = await profileService.followUser(followerId, followingId);
+    res.status(200).json(result);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    if (message.startsWith('BAD_REQUEST')) 
+      return res.status(400).json({ error: message.split(':')[1] });
+    if (message.startsWith('CONFLICT')) 
+      return res.status(409).json({ error: message.split(':')[1] });
+    next(error);
+  }
+}
+
+export async function unfollow(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Usuário não autenticado." });
+    }
+    const followerId = req.user.id;
+    const followingId = req.params.id;
+    const result = await profileService.unfollowUser(followerId, followingId);
+    res.status(200).json(result);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    if (message.startsWith('BAD_REQUEST')) 
+      return res.status(400).json({ error: message.split(':')[1] });
+    if (message.startsWith('NOT_FOUND')) 
+      return res.status(404).json({ error: message.split(':')[1] });
+    next(error);
+  }
+}
+
+export async function getStats(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.params.id;
+    const stats = await profileService.getFollowStats(userId);
+    return res.status(200).json(stats);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    if (message.startsWith('NOT_FOUND')) 
+      return res.status(404).json({ error: message.split(':')[1] });
+    next(error);
+  }
+}
+
+export async function getFollowersList(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.params.id;
+    const followers = await profileService.getFollowers(userId);
+    return res.status(200).json(followers);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getFollowingList(req: Request, res: Response, next: NextFunction) {
+  try {
+    const userId = req.params.id;
+    const following = await profileService.getFollowing(userId);
+    return res.status(200).json(following);
+  } catch (error) {
+    next(error);
+  }
+}

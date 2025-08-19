@@ -14,6 +14,8 @@ export interface UserProfileData {
     total_posts?: number;
     role?: string;
     avatar_url?: string;
+    followers_count?: number;
+    following_count?: number;
   }
 
   export interface UserProfileWithoutId {
