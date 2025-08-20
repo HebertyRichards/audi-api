@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import * as profileService from '../services/profileService';
 import { getErrorMessage } from '../helpers/Message';
 import { AuthenticatedRequest } from '../types/auth';
+import { handleControllerError } from '../helpers/ErrorUtils';
 
 export async function getProfile(req: Request, res: Response) {
   try {
@@ -160,13 +161,8 @@ export async function follow(req: AuthenticatedRequest, res: Response, next: Nex
     const followingId = req.params.id;
     const result = await profileService.followUser(followerId, followingId);
     res.status(200).json(result);
-  } catch (error) {
-    const message = getErrorMessage(error);
-    if (message.startsWith('BAD_REQUEST')) 
-      return res.status(400).json({ error: message.split(':')[1] });
-    if (message.startsWith('CONFLICT')) 
-      return res.status(409).json({ error: message.split(':')[1] });
-    next(error);
+  } catch (error: unknown) {
+    handleControllerError(error, res, next);
   }
 }
 
@@ -179,13 +175,8 @@ export async function unfollow(req: AuthenticatedRequest, res: Response, next: N
     const followingId = req.params.id;
     const result = await profileService.unfollowUser(followerId, followingId);
     res.status(200).json(result);
-  } catch (error) {
-    const message = getErrorMessage(error);
-    if (message.startsWith('BAD_REQUEST')) 
-      return res.status(400).json({ error: message.split(':')[1] });
-    if (message.startsWith('NOT_FOUND')) 
-      return res.status(404).json({ error: message.split(':')[1] });
-    next(error);
+  } catch (error: unknown) {
+    handleControllerError(error, res, next);
   }
 }
 
@@ -194,11 +185,8 @@ export async function getStats(req: Request, res: Response, next: NextFunction) 
     const userId = req.params.id;
     const stats = await profileService.getFollowStats(userId);
     return res.status(200).json(stats);
-  } catch (error) {
-    const message = getErrorMessage(error);
-    if (message.startsWith('NOT_FOUND')) 
-      return res.status(404).json({ error: message.split(':')[1] });
-    next(error);
+  } catch (error: unknown) {
+    handleControllerError(error, res, next);
   }
 }
 
@@ -207,8 +195,8 @@ export async function getFollowersList(req: Request, res: Response, next: NextFu
     const userId = req.params.id;
     const followers = await profileService.getFollowers(userId);
     return res.status(200).json(followers);
-  } catch (error) {
-    next(error);
+  } catch (error: unknown) {
+    handleControllerError(error, res, next);
   }
 }
 
@@ -217,7 +205,7 @@ export async function getFollowingList(req: Request, res: Response, next: NextFu
     const userId = req.params.id;
     const following = await profileService.getFollowing(userId);
     return res.status(200).json(following);
-  } catch (error) {
-    next(error);
+  } catch (error: unknown) {
+    handleControllerError(error, res, next);
   }
 }

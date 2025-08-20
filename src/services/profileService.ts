@@ -1,6 +1,7 @@
 import { supabase, supabaseAdmin ,createAuthenticatedClient }from '../config/supabase';
 import dotenv from 'dotenv';
 import { UserProfileData, UserProfileWithoutId } from '../types/user';
+import { AppError } from '../helpers/ApiError';
 
 dotenv.config();
   
@@ -226,7 +227,7 @@ export async function deleteAvatar(userId: string) {
 
 export async function followUser(followerId: string, followingId: string) {
   if (followerId === followingId) {
-    throw new Error('BAD_REQUEST:Você não pode seguir a si mesmo.');
+    throw new AppError('BAD_REQUEST', 'Você não pode seguir a si mesmo.');
   }
 
   const { error } = await supabase.rpc('handle_follow', {
@@ -236,86 +237,84 @@ export async function followUser(followerId: string, followingId: string) {
 
   if (error) {
     if (error.code === '23505') { 
-      throw new Error('CONFLICT:Você já está seguindo este usuário.');
+      throw new AppError('CONFLICT', 'Você já está seguindo este usuário.');
     }
-    console.error('Erro ao seguir usuário:', error);
-    throw new Error('Não foi possível completar a ação de seguir.');
+    // Para qualquer outro erro de banco de dados, lançamos um erro genérico
+    throw new AppError('INTERNAL_SERVER_ERROR', 'Não foi possível completar a ação de seguir.');
   }
 
   return { message: 'Usuário seguido com sucesso!' };
 }
 
-export async function unfollowUser(followerId: string, followingId: string) {
-    if (followerId === followingId) {
-    throw new Error('BAD_REQUEST:Você não pode deixar de seguir a si mesmo.');
+export async function unfollowUser(followerId: string, followingId:string) {
+  if (followerId === followingId) {
+    throw new AppError('BAD_REQUEST', 'Você não pode deixar de seguir a si mesmo.');
   }
 
-  const { data: followExists, error: checkError } = await supabase
-    .from('followers')
-    .select('*')
-    .eq('follower_id', followerId)
-    .eq('following_id', followingId)
-    .maybeSingle();
-
-  if (checkError) {
-      console.error('Erro ao verificar se segue:', checkError);
-      throw new Error('Ocorreu um erro ao tentar deixar de seguir.');
-  }
-
-  if (!followExists) {
-      throw new Error('NOT_FOUND:Você não está seguindo este usuário.');
-  }
-
-  const { error: rpcError } = await supabase.rpc('handle_unfollow', {
+  // A RPC pode ser mais eficiente e lidar com a verificação e exclusão em uma única transação.
+  // Isso evita a condição de corrida e reduz as chamadas ao banco de dados.
+  const { error } = await supabase.rpc('handle_unfollow', {
     follower_uuid: followerId,
     following_uuid: followingId,
   });
 
-  if (rpcError) {
-    console.error('Erro ao deixar de seguir usuário:', rpcError);
-    throw new Error('Não foi possível completar a ação de deixar de seguir.');
+  if (error) {
+    // A função RPC pode retornar um código de erro específico se o "follow" não existir
+    if (error.message.includes('NOT_FOUND')) {
+      throw new AppError('NOT_FOUND', 'Você não está seguindo este usuário.');
+    }
+    throw new AppError('INTERNAL_SERVER_ERROR', 'Não foi possível completar a ação de deixar de seguir.');
   }
 
   return { message: 'Você deixou de seguir o usuário.' };
 }
 
 export async function getFollowStats(userId: string) {
-    const { data, error } = await supabase
-        .from('profiles')
-        .select('followers_count, following_count')
-        .eq('id', userId)
-        .single();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('followers_count, following_count')
+    .eq('id', userId)
+    .single();
 
-    if (error || !data) {
-        throw new Error('NOT_FOUND:Usuário não encontrado.');
-    }
+  if (error || !data) {
+    throw new AppError('NOT_FOUND', 'Usuário não encontrado.');
+  }
 
-    return data;
+  return data;
 }
 
 export async function getFollowers(userId: string) {
+  // Primeiro, verificamos se o usuário existe para dar uma resposta 404 clara
+  const { data: userExists, error: userError } = await supabase.from('profiles').select('id').eq('id', userId).maybeSingle();
+  if (userError || !userExists) {
+      throw new AppError('NOT_FOUND', 'Usuário não encontrado.');
+  }
+  
   const { data, error } = await supabase
-      .from('followers')
-      .select('follower:profiles!followers_follower_id_fkey(id, username, avatar_url)')
-      .eq('following_id', userId);
+    .from('followers')
+    .select('follower:profiles!followers_follower_id_fkey(id, username, avatar_url)')
+    .eq('following_id', userId);
   
   if (error) {
-      console.error('Supabase getFollowers error:', error); 
-      throw new Error('Erro ao buscar seguidores.');
+    throw new AppError('INTERNAL_SERVER_ERROR', 'Erro ao buscar seguidores.');
   }
 
   return data.map(item => item.follower);
 }
 
 export async function getFollowing(userId: string) {
+  const { data: userExists, error: userError } = await supabase.from('profiles').select('id').eq('id', userId).maybeSingle();
+  if (userError || !userExists) {
+      throw new AppError('NOT_FOUND', 'Usuário não encontrado.');
+  }
+
   const { data, error } = await supabase
-      .from('followers')
-      .select('following:profiles!followers_following_id_fkey(id, username, avatar_url)')
-      .eq('follower_id', userId);
+    .from('followers')
+    .select('following:profiles!followers_following_id_fkey(id, username, avatar_url)')
+    .eq('follower_id', userId);
 
   if (error) {
-      console.error('Supabase getFollowing error:', error);
-      throw new Error('Erro ao buscar usuários que você segue.');
+    throw new AppError('INTERNAL_SERVER_ERROR', 'Erro ao buscar usuários que você segue.');
   }
 
   return data.map(item => item.following);

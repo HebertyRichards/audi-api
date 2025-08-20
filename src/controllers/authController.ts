@@ -118,9 +118,9 @@ export async function getSession(req: Request, res: Response) {
       const refreshedUser = await authService.getUserByToken(newAccessToken);
       res.setHeader('Set-Cookie', createCookie('sb-access-token', newAccessToken, accessTokenExpiry));
       user = refreshedUser;
-    } catch (refreshError: unknown) {
+    } catch (error: unknown) {
       clearAuthCookies(res);
-      const originalRefreshMessage = getErrorMessage(refreshError);
+      const originalRefreshMessage = getErrorMessage(error);
       
       if (originalRefreshMessage.startsWith('INVALID_REFRESH_TOKEN')) {
         const userMessage = originalRefreshMessage.split(':')[1] || 'Sua sessão expirou. Faça login novamente.';
