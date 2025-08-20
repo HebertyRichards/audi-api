@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import * as profileService from '../services/profileService';
-import { getErrorMessage } from '../helpers/Message';
 import { AuthenticatedRequest } from '../types/auth';
 import { handleControllerError } from '../helpers/ErrorUtils';
 
