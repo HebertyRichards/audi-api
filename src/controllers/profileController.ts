@@ -4,36 +4,24 @@ import { getErrorMessage } from '../helpers/Message';
 import { AuthenticatedRequest } from '../types/auth';
 import { handleControllerError } from '../helpers/ErrorUtils';
 
-export async function getProfile(req: Request, res: Response) {
+export async function getProfile(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;
     const profile = await profileService.getProfileById(id);
     res.status(200).json(profile);
   } catch (error: unknown) {
-    const message = getErrorMessage(error);
-
-    if (message.startsWith('NOT_FOUND')) {
-      const userMessage = message.split(':')[1] || 'Perfil não encontrado.';
-      return res.status(404).json({ error: userMessage });
-    } else {
-      return res.status(500).json({ error: message });
-    }
+    handleControllerError(error, res, next);
   }
 }
 
-export async function getAllUsers(req: Request, res: Response) {
+export async function getAllUsers(req: Request, res: Response, next: NextFunction) {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const result = await profileService.getAllProfiles(page, limit);
     res.status(200).json(result);
   } catch (error: unknown) {
-    const message = getErrorMessage(error)
-    if (message.startsWith('NOT_FOUND')) {
-      return res.status(404).json({ error: message.split(':')[1] });
-    } else {
-      return res.status(500).json({ message: message });
-    }
+    handleControllerError(error, res, next);
   }
 }
 
@@ -42,7 +30,7 @@ export async function updateUserProfile(req: AuthenticatedRequest, res: Response
     if (!req.user) {
       return res.status(401).json({ error: "Usuário não autenticado." });
     }
-    
+
     const userId = req.user.id;
     const profileData = req.body;
 
@@ -50,53 +38,27 @@ export async function updateUserProfile(req: AuthenticatedRequest, res: Response
     return res.status(200).json(result);
 
   } catch (error: unknown) {
-    const message = getErrorMessage(error);
-
-    if (message.startsWith('BAD_REQUEST')) {
-      return res.status(400).json({ error: message.split(':')[1] });
-    }
-    if (message.startsWith('NOT_FOUND')) {
-      return res.status(404).json({ error: message.split(':')[1] });
-    }
-    if (message.startsWith('CONFLICT')) {
-      return res.status(409).json({ error: message.split(':')[1] });
-    } else {
-      next(error);
-    }
+    handleControllerError(error, res, next);
   }
 }
 
-export async function deleteUserProfile(req: Request, res: Response) {
+export async function deleteUserProfile(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;
     await profileService.DeleteProfile(id);
     res.status(204).send();
   } catch (error: unknown) {
-    const message = getErrorMessage(error);
-
-    if (message.startsWith('NOT_FOUND')) {
-      const userMessage = message.split(':')[1] || 'Perfil não encontrado.';
-      return res.status(404).json({ error: userMessage });
-    } else {
-      return res.status(500).json({ error: message });
-    }
+    handleControllerError(error, res, next);
   }
 }
 
-export async function getUserProfile(req: Request, res: Response) {
+export async function getUserProfile(req: Request, res: Response, next: NextFunction) {
   try {
     const { username } = req.params;
     const profile = await profileService.getUserProfileByUsername(username);
     res.status(200).json(profile);
   } catch (error: unknown) {
-    const message = getErrorMessage(error);
-
-    if (message.startsWith('NOT_FOUND')) {
-      const userMessage = message.split(':')[1] || 'Usuário não encontrado.';
-      return res.status(404).json({ error: userMessage });
-    } else {
-      return res.status(500).json({ error: message });
-    }
+    handleControllerError(error, res, next);
   }
 }
 
@@ -106,28 +68,19 @@ export async function updateAvatarProfile(req: AuthenticatedRequest, res: Respon
       return res.status(401).json({ error: "Usuário não autenticado." });
     }
     const token = req.cookies['sb-access-token'];
-
     if (!token) {
-        return res.status(401).json({ error: "Token de sessão não encontrado." });
+      return res.status(401).json({ error: "Token de sessão não encontrado." });
     }
     const userId = req.user.id;
     const avatarFile = req.file;
-
+    
     if (!avatarFile) {
       return res.status(400).json({ error: "Nenhum arquivo enviado." });
     }
     const result = await profileService.updateAvatar(userId, avatarFile, token);
     return res.status(200).json(result);
   } catch (error: unknown) {
-    const message = getErrorMessage(error);
-    if (message.startsWith('BAD_REQUEST')) {
-      return res.status(400).json({ error: message.split(':')[1] });
-    }
-    if (message.startsWith('NOT_FOUND')) {
-      return res.status(404).json({ error: message.split(':')[1] });
-    } else {
-      next(error); 
-    }
+    handleControllerError(error, res, next);
   }
 }
 
@@ -136,19 +89,10 @@ export async function deleteAvatarProfile(req: AuthenticatedRequest, res: Respon
     if (!req.user) {
       return res.status(401).json({ error: "Usuário não autenticado." });
     }
-    const userId = req.user.id;
-    const result = await profileService.deleteAvatar(userId);
+    const result = await profileService.deleteAvatar(req.user.id);
     return res.status(200).json(result);
   } catch (error: unknown) {
-    const message = getErrorMessage(error);
-    if (message.startsWith('BAD_REQUEST')) {
-      return res.status(400).json({ error: message.split(':')[1] });
-    }
-    if (message.startsWith('NOT_FOUND')) {
-      return res.status(404).json({ error: message.split(':')[1] });
-    } else {
-      next(error); 
-    }
+    handleControllerError(error, res, next);
   }
 }
 
