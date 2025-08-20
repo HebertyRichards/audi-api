@@ -18,10 +18,15 @@ router.patch(
     upload.single('avatar'), 
     profileController.updateAvatarProfile
   );
-  router.delete(
+router.delete(
     '/user/avatar',
     authenticateUser,
     profileController.deleteAvatarProfile 
 );
+router.post('/:id/follow', authenticateUser, profileController.follow);
+router.delete('/:id/follow', authenticateUser, profileController.unfollow);
+router.get('/:id/stats', profileController.getStats);
+router.get('/:id/followers', profileController.getFollowersList);
+router.get('/:id/following', profileController.getFollowingList);
 
 export default router;

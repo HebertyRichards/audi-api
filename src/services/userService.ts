@@ -1,10 +1,11 @@
 import { supabase } from '../config/supabase';
 import dotenv from 'dotenv';
 import { UserProfileData } from '../types/user';
+import { AppError } from '../helpers/ApiError';
 
 dotenv.config();
   
-export async function getLastRegistrationUser(): Promise<UserProfileData | null> {
+export async function getLastRegistrationUser(): Promise<UserProfileData> {
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -12,15 +13,8 @@ export async function getLastRegistrationUser(): Promise<UserProfileData | null>
     .limit(1)
     .single();
 
-  if (error) {
-    if (error.code === 'PGRST116') {
-      throw new Error('NOT_FOUND:Nenhum usuário registrado foi encontrado.');
-    }
-    throw new Error('Ocorreu um erro ao buscar o último registro.');
-  }
-
-  if (!data) {
-    throw new Error('NOT_FOUND:Nenhum usuário registrado foi encontrado.');
+  if (error || !data) {
+    throw new AppError('NOT_FOUND', 'Nenhum usuário registrado foi encontrado.');
   }
 
   return data;
@@ -32,7 +26,7 @@ export async function upsertOnlineUser(userId: string) {
     .upsert([{ user_id: userId, last_seen_at: new Date().toISOString() }])
     .select('last_seen_at');
   if (error) {
-    throw new Error("Não foi possível atualizar o status online");
+    throw new AppError('INTERNAL_SERVER_ERROR', "Não foi possível atualizar o status online.");
   }
 
   return data;
@@ -45,7 +39,7 @@ export async function getOnlineUsers() {
     .gt("last_seen_at", new Date(Date.now() - 2 * 60 * 1000).toISOString());
 
   if (error) {
-    throw new Error("Erro ao buscar usuários online.");
+    throw new AppError('INTERNAL_SERVER_ERROR', "Erro ao buscar usuários online.");
   }
 
   return data;
