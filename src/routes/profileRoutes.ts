@@ -10,7 +10,6 @@ const upload = multer({ storage: multer.memoryStorage() });
 router.get('/user/all', profileController.getAllUsers)
 router.get('/:id', profileController.getProfile);
 router.put('/update', authenticateUser, profileController.updateUserProfile);
-router.delete('/:id',authenticateUser, profileController.deleteUserProfile);
 router.get('/user/:username', profileController.getUserProfile);
 router.patch(
     '/user/avatar',

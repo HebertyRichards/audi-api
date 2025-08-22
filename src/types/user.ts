@@ -1,5 +1,5 @@
 export interface UserProfileData {
-    id: string;
+    id?: string;
     username: string;
     website?: string;
     gender?: string;

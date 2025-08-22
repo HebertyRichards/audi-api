@@ -3,6 +3,7 @@ import * as authService from '../services/authService';
 import * as cookie from 'cookie';
 import { supabase } from '../config/supabase';
 import { handleControllerError } from '../helpers/ErrorUtils';
+import { AuthenticatedRequest } from '../types/auth';
 
 const createCookie = (name: string, value: string, maxAge: number): string => {
   return cookie.serialize(name, value, {
@@ -133,6 +134,42 @@ export async function sendRecoveryEmail(req: Request, res: Response, next: NextF
     }
     const result = await authService.sendRecoveryEmail(email);
     return res.status(200).json(result);
+  } catch (error: unknown) {
+    handleControllerError(error, res, next);
+  }
+}
+
+export async function changeEmail(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { newEmail } = req.body;
+    const token = req.cookies['sb-access-token'];
+
+    if (!token) {
+      return res.status(401).json({ error: 'Token de autenticação não fornecido.' });
+    }
+    if (!newEmail) {
+      return res.status(400).json({ error: 'O novo e-mail é obrigatório.' });
+    }
+    const result = await authService.updateUserEmail(token, newEmail);
+    return res.status(200).json(result);
+  } catch (error: unknown) {
+    handleControllerError(error, res, next);
+  }
+}
+
+export async function deleteAccount(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const user = req.user;
+    const { password } = req.body;
+    
+    if (!user || !user.id || !user.email) {
+      return res.status(401).json({ error: 'Informações de usuário inválidas ou incompletas na sessão.' });
+    }
+    if (!password) {
+      return res.status(400).json({ error: 'Senha é obrigatória para confirmar a exclusão.' });
+    }
+    const result = await authService.deleteUserAccount(user.id, user.email, password);
+    res.status(200).json(result);
   } catch (error: unknown) {
     handleControllerError(error, res, next);
   }

@@ -41,16 +41,6 @@ export async function updateUserProfile(req: AuthenticatedRequest, res: Response
   }
 }
 
-export async function deleteUserProfile(req: Request, res: Response, next: NextFunction) {
-  try {
-    const { id } = req.params;
-    await profileService.DeleteProfile(id);
-    res.status(204).send();
-  } catch (error: unknown) {
-    handleControllerError(error, res, next);
-  }
-}
-
 export async function getUserProfile(req: Request, res: Response, next: NextFunction) {
   try {
     const { username } = req.params;

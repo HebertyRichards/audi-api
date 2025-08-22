@@ -153,3 +153,37 @@ export async function sendRecoveryEmail(email: string, options?: RecoveryOptions
   }
   return { message: 'Se uma conta com este e-mail existir, um link para redefinição de senha foi enviado.' };
 }
+
+export async function updateUserEmail(accessToken: string, newEmail: string) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
+
+  if (userError || !user) {
+    throw new AppError('UNAUTHORIZED', 'Token inválido ou expirado. Faça login novamente.');
+  }
+  const { error: updateError } = await supabase.auth.updateUser(
+    { email: newEmail },
+  );
+
+  if (updateError) {
+    if (updateError.message.includes("Um usuário com este endereço de e-mail já foi registrado")) {
+      throw new AppError('CONFLICT', 'Este novo e-mail já está em uso por outra conta.');
+    }
+    throw new AppError('INTERNAL_SERVER_ERROR', 'Não foi possível iniciar a alteração de e-mail.');
+  }
+
+  return { message: 'Um e-mail de confirmação foi enviado para o novo endereço. Por favor, verifique sua caixa de entrada para concluir a alteração.' };
+}
+
+export async function deleteUserAccount(userId: string, email: string, password: string) {
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (signInError) {
+    throw new AppError('UNAUTHORIZED', 'Senha incorreta. A exclusão da conta foi cancelada.');
+  }
+  const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+
+  if (deleteError) {
+    throw new AppError('INTERNAL_SERVER_ERROR', 'Não foi possível deletar a conta do usuário.');
+  }
+  return { message: 'Conta de usuário deletada com sucesso.' };
+}

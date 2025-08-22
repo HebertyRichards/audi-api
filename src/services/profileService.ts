@@ -88,24 +88,6 @@ export async function updateProfile(profile: Partial<UserProfileData> & { id: st
   return { message: 'Perfil atualizado com sucesso!' };
 }
 
-export async function DeleteProfile(id: string): Promise<{ message: string }> {
-
-  const { data, error } = await supabase
-  .from('profiles')
-  .delete()
-  .eq('id', id)
-  .select();
-
-  if (error) {
-    throw new AppError('INTERNAL_SERVER_ERROR', 'Ocorreu um erro ao tentar deletar o perfil.');
-  }
-
-  if (!data || data.length === 0) {
-    throw new AppError('NOT_FOUND', 'O perfil que você tentou deletar não foi encontrado.');
-  }
-  return { message: 'Perfil deletado com sucesso!' };
-}
-
 export async function getUserProfileByUsername(username: string): Promise<UserProfileWithoutId> {
   const { data, error } = await supabase
     .from('profiles')
