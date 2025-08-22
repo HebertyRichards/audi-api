@@ -154,24 +154,43 @@ export async function sendRecoveryEmail(email: string, options?: RecoveryOptions
   return { message: 'Se uma conta com este e-mail existir, um link para redefinição de senha foi enviado.' };
 }
 
-export async function updateUserEmail(accessToken: string, newEmail: string) {
+export async function updateUserProfileAndAuth(accessToken: string, newUsername: string, newEmail: string) {
   const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
 
   if (userError || !user) {
     throw new AppError('UNAUTHORIZED', 'Token inválido ou expirado. Faça login novamente.');
   }
-  const { error: updateError } = await supabase.auth.updateUser(
-    { email: newEmail },
-  );
 
-  if (updateError) {
-    if (updateError.message.includes("Um usuário com este endereço de e-mail já foi registrado")) {
-      throw new AppError('CONFLICT', 'Este novo e-mail já está em uso por outra conta.');
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({ username: newUsername })
+    .eq('id', user.id);
+  
+  if (profileError) {
+    if (profileError.code === '23505') { 
+      throw new AppError('CONFLICT', 'Este nome de usuário já está em uso.');
     }
-    throw new AppError('INTERNAL_SERVER_ERROR', 'Não foi possível iniciar a alteração de e-mail.');
+    throw new AppError('INTERNAL_SERVER_ERROR', 'Não foi possível atualizar o nome de usuário.');
   }
 
-  return { message: 'Um e-mail de confirmação foi enviado para o novo endereço. Por favor, verifique sua caixa de entrada para concluir a alteração.' };
+  if (newEmail && newEmail.toLowerCase() !== user.email?.toLowerCase()) {
+    const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(
+      user.id,
+      { email: newEmail }
+    );
+
+    if (updateAuthError) {
+      if (updateAuthError.message.includes("already been registered")) {
+        throw new AppError('CONFLICT', 'Este novo e-mail já está em uso por outra conta.');
+      }
+      console.error("Supabase email update error:", updateAuthError); 
+      throw new AppError('INTERNAL_SERVER_ERROR', 'Ocorreu uma falha ao tentar atualizar o e-mail.');
+    }
+    
+    return { message: "Perfil atualizado! Um e-mail de confirmação foi enviado para o novo endereço." };
+  }
+
+  return { message: "Perfil atualizado com sucesso!" };
 }
 
 export async function deleteUserAccount(userId: string, email: string, password: string) {

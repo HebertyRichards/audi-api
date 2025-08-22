@@ -8,7 +8,7 @@ dotenv.config();
 export async function getLastRegistrationUser(): Promise<UserProfileData> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('username')
+    .select('username, role')
     .order('joined_at', { ascending: false })
     .limit(1)
 
