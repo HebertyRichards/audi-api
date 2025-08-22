@@ -8,16 +8,19 @@ dotenv.config();
 export async function getLastRegistrationUser(): Promise<UserProfileData> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('*')
+    .select('username')
     .order('joined_at', { ascending: false })
     .limit(1)
-    .single();
 
-  if (error || !data) {
+  if (error) {
+    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao buscar o usuário.');
+  }
+
+  if (!data || data.length === 0) {
     throw new AppError('NOT_FOUND', 'Nenhum usuário registrado foi encontrado.');
   }
 
-  return data;
+  return data[0];
 }
 
 export async function upsertOnlineUser(userId: string) {
