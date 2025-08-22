@@ -153,3 +153,56 @@ export async function sendRecoveryEmail(email: string, options?: RecoveryOptions
   }
   return { message: 'Se uma conta com este e-mail existir, um link para redefinição de senha foi enviado.' };
 }
+
+export async function updateUserProfileAndAuth(accessToken: string, newUsername: string, newEmail: string) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
+
+  if (userError || !user) {
+    throw new AppError('UNAUTHORIZED', 'Token inválido ou expirado. Faça login novamente.');
+  }
+
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({ username: newUsername })
+    .eq('id', user.id);
+  
+  if (profileError) {
+    if (profileError.code === '23505') { 
+      throw new AppError('CONFLICT', 'Este nome de usuário já está em uso.');
+    }
+    throw new AppError('INTERNAL_SERVER_ERROR', 'Não foi possível atualizar o nome de usuário.');
+  }
+
+  if (newEmail && newEmail.toLowerCase() !== user.email?.toLowerCase()) {
+    const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(
+      user.id,
+      { email: newEmail }
+    );
+
+    if (updateAuthError) {
+      if (updateAuthError.message.includes("already been registered")) {
+        throw new AppError('CONFLICT', 'Este novo e-mail já está em uso por outra conta.');
+      }
+      console.error("Supabase email update error:", updateAuthError); 
+      throw new AppError('INTERNAL_SERVER_ERROR', 'Ocorreu uma falha ao tentar atualizar o e-mail.');
+    }
+    
+    return { message: "Perfil atualizado! Um e-mail de confirmação foi enviado para o novo endereço." };
+  }
+
+  return { message: "Perfil atualizado com sucesso!" };
+}
+
+export async function deleteUserAccount(userId: string, email: string, password: string) {
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (signInError) {
+    throw new AppError('UNAUTHORIZED', 'Senha incorreta. A exclusão da conta foi cancelada.');
+  }
+  const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+
+  if (deleteError) {
+    throw new AppError('INTERNAL_SERVER_ERROR', 'Não foi possível deletar a conta do usuário.');
+  }
+  return { message: 'Conta de usuário deletada com sucesso.' };
+}
