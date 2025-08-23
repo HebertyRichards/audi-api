@@ -1,18 +1,19 @@
 export interface Topic {
     id: number;
-    titulo: string;
-    conteudo: string;
-    autor_id: string;
-    categoria: string;
-    criado_em: string;
-    atualizado_em: string | null;
+    title: string;
+    content: string;
+    author_id: string;
+    category: string;
+    created: string;
+    update: string | null;
+    slug: string;
   }
   
   export interface Comment {
     id: number;
-    conteudo: string;
-    autor_id: string;
+    content: string;
+    author_id: string;
     topico_id: number;
-    criado_em: string;
+    created: string;
   }
   

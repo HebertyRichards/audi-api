@@ -39,3 +39,13 @@ export async function getTopic(req: Request, res: Response, next: NextFunction) 
     handleControllerError(error, res, next);
   }
 }
+
+export async function getTopicBySlug(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { slug } = req.params;
+    const topic = await topicService.getTopicBySlugWithComments(slug);
+    res.status(200).json(topic);
+  } catch (error: unknown) {
+    handleControllerError(error, res, next);
+  }
+}

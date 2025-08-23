@@ -7,5 +7,6 @@ const router = Router();
 router.post('/topics', authenticateUser, topicController.createTopic);
 router.post('/topics/:topicId/comments', authenticateUser, topicController.createComment);
 router.get('/topics/:id', topicController.getTopic);
+router.get('/topics/slug/:slug', topicController.getTopicBySlug);
 
 export default router;
