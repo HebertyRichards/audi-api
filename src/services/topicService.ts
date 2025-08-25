@@ -19,8 +19,12 @@ export async function createTopic(
   const slug = generateSlug(title);
   const { data, error } = await supabase
     .from('topicos')
-    .insert([{ title: title, content: content, author_id, category, slug }])
-    .select()
+    .insert([{ title, content, author_id, category, slug }])
+    .select(`
+      id, title, content, author_id, category, slug,
+      created:created_in,
+      update:updated_in
+    `)
     .single();
 
   if (error) {
@@ -33,12 +37,16 @@ export async function createTopic(
 export async function createComment(
   content: string,
   author_id: string,
-  topico_id: number
+  topic_id: number
 ): Promise<Comment> {
   const { data, error } = await supabase
     .from('comentarios')
-    .insert([{ content: content, author_id, topico_id }])
-    .select()
+    .insert([{ content, author_id, topic_id }]) 
+    .select(`
+      id, content, author_id,
+      topico_id:topic_id,
+      created:created_in
+    `)
     .single();
 
   if (error) {
@@ -49,10 +57,45 @@ export async function createComment(
 }
 
 export async function getTopicWithComments(topicId: number) {
+  return getTopicByField('id', topicId);
+}
+
+export async function getTopicBySlugWithComments(slug: string) {
+  return getTopicByField('slug', slug);
+}
+
+export async function deleteTopic(topicId: number, userId: string): Promise<void> {
+    const { error, count } = await supabase
+      .from('topicos')
+      .delete()
+      .match({ id: topicId, author_id: userId });
+  
+    if (error) {
+      throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao deletar o tópico.');
+    }
+  
+    if (count === 0) {
+      throw new AppError('NOT_FOUND', 'Tópico não encontrado ou você não tem permissão para deletá-lo.');
+    }
+}
+
+async function getTopicByField(field: 'id' | 'slug', value: number | string) {
+  const query = `
+    id, title, content, author_id, category, slug,
+    created:created_in,
+    update:updated_in,
+    profiles (username, avatar_url, role),
+    comentarios (
+      id, content, author_id,
+      topico_id:topic_id,
+      created:created_in,
+      profiles (username, avatar_url, role)
+    )
+  `;
   const { data, error } = await supabase
     .from('topicos')
-    .select(`*,profiles (username, avatar_url, role), comentarios (*,profiles (username, avatar_url, role))`)
-    .eq('id', topicId)
+    .select(query)
+    .eq(field, value)
     .single();
 
   if (error) {
@@ -66,19 +109,24 @@ export async function getTopicWithComments(topicId: number) {
   return data;
 }
 
-export async function getTopicBySlugWithComments(slug: string) {
+export async function updateTopic(
+  topicId: number,
+  userId: string,
+  updates: { title?: string; content?: string }
+): Promise<Topic> {
   const { data, error } = await supabase
     .from('topicos')
-    .select(`*,profiles (username, avatar_url, role), comentarios (*,profiles (username, avatar_url, role))`)
-    .eq('slug', slug)
+    .update({ ...updates, updated_in: new Date() })
+    .match({ id: topicId, author_id: userId })
+    .select(`
+      id, title, content, author_id, category, slug,
+      created:created_in,
+      update:updated_in
+    `)
     .single();
 
-  if (error) {
-    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao buscar o tópico.');
-  }
-
-  if (!data) {
-    throw new AppError('NOT_FOUND', 'Tópico não encontrado.');
+  if (error || !data) {
+    throw new AppError('UPDATE_ERROR', 'Não foi possível atualizar o tópico. Verifique suas permissões.');
   }
 
   return data;
