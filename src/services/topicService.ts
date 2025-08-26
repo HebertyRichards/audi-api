@@ -1,21 +1,28 @@
 import { supabase } from '../config/supabase';
 import { AppError } from '../helpers/ApiError';
 import { Topic, Comment } from '../types/topic';
+import * as categoryService from './categoryService';
 
 function generateSlug(title: string): string {
-  const slug = title
+  const slugBase = title
     .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/ /g, '-')
     .replace(/[^\w-]+/g, ''); 
-  return `${slug}-${Math.floor(Math.random() * 10000)}`;
+  return `${slugBase}-${Date.now()}`; 
 }
 
 export async function createTopic(
   title: string,
   content: string,
   author_id: string,
-  category: string
+  category: string 
 ): Promise<Topic> {
+  const isValidCategory = await categoryService.categoryExists(category);
+  if (!isValidCategory) {
+    throw new AppError('VALIDATION_ERROR', `A categoria '${category}' não é válida.`);
+  }
+
   const slug = generateSlug(title);
   const { data, error } = await supabase
     .from('topicos')
@@ -27,12 +34,15 @@ export async function createTopic(
     `)
     .single();
 
-  if (error) {
-    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao criar o tópico.');
-  }
+    if (error) {
+      // Adicione esta linha para ver o erro detalhado no seu console do backend
+      console.error('ERRO DETALHADO DO SUPABASE:', error); 
+      throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao criar o tópico.');
+    }
 
   return data;
 }
+
 
 export async function createComment(
   content: string,
@@ -130,4 +140,25 @@ export async function updateTopic(
   }
 
   return data;
+}
+
+export async function getTopicsByCategory(categorySlug: string) {
+  const { data, error } = await supabase
+    .from('topicos')
+    .select(`
+      id,
+      title,
+      slug,
+      created_in,
+      profiles ( username, avatar_url ),
+      comentarios ( count )
+    `)
+    .eq('category', categorySlug)
+    .order('created_in', { ascending: false });
+
+  if (error) {
+    throw new AppError('DATABASE_ERROR', 'Não foi possível buscar os tópicos da categoria.');
+  }
+
+  return data || [];
 }

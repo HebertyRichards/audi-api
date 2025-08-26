@@ -17,3 +17,8 @@ export interface Topic {
     created: string;
   }
   
+  export interface Category {
+    slug: string;
+    name: string;
+  }
+  
