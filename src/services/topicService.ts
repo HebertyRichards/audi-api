@@ -35,8 +35,6 @@ export async function createTopic(
     .single();
 
     if (error) {
-      // Adicione esta linha para ver o erro detalhado no seu console do backend
-      console.error('ERRO DETALHADO DO SUPABASE:', error); 
       throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao criar o tópico.');
     }
 
@@ -87,6 +85,21 @@ export async function deleteTopic(topicId: number, userId: string): Promise<void
     if (count === 0) {
       throw new AppError('NOT_FOUND', 'Tópico não encontrado ou você não tem permissão para deletá-lo.');
     }
+}
+
+export async function deleteComment(commentId: number, userId: string): Promise<void> {
+  const { error, count } = await supabase
+    .from('comentarios')
+    .delete()
+    .match({ id: commentId, author_id: userId });
+
+  if (error) {
+    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao deletar o comentário.');
+  }
+
+  if (count === 0 || count === null) {
+    throw new AppError('NOT_FOUND', 'Comentário não encontrado ou você não tem permissão para deletá-lo.');
+  }
 }
 
 async function getTopicByField(field: 'id' | 'slug', value: number | string) {

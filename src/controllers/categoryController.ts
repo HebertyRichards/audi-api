@@ -6,7 +6,7 @@ export async function getAllCategories(req: Request, res: Response, next: NextFu
   try {
     const categories = await categoryService.getAllCategories();
     res.status(200).json(categories);
-  } catch (error) {
+  } catch (error: unknown) {
     handleControllerError(error, res, next);
   }
 }

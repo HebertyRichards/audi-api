@@ -9,8 +9,8 @@ const createTopicSchema = z.object({
   content: z.string().min(10, "O conteúdo deve ter no mínimo 10 caracteres."),
   category: z.string().nonempty("A categoria é obrigatória."),
 });
+
 export async function createTopic(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  console.log("DADOS RECEBIDOS NO BACKEND:", req.body);
   const validationResult = createTopicSchema.safeParse(req.body);
   if (!validationResult.success) {
     return res.status(400).json({ errors: validationResult.error.flatten() });
@@ -28,7 +28,6 @@ export async function createTopic(req: AuthenticatedRequest, res: Response, next
     const topic = await topicService.createTopic(title, content, req.user!.id, category);
     res.status(201).json(topic);
   } catch (error: unknown) {
-    console.error("ERRO CAPTURADO NO CONTROLLER:", error);
     handleControllerError(error, res, next);
   }
 }
@@ -74,6 +73,22 @@ export async function deleteTopic(req: AuthenticatedRequest, res: Response, next
     }
     const topicId = parseInt(req.params.id, 10);
     await topicService.deleteTopic(topicId, req.user.id);
+    res.status(204).send();
+  } catch (error: unknown) {
+    handleControllerError(error, res, next);
+  }
+}
+
+export async function deleteComment(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Usuário não autenticado." });
+    }
+    const commentId = parseInt(req.params.id, 10);
+    if (isNaN(commentId)) {
+        return res.status(400).json({ error: "ID de comentário inválido." });
+    }
+    await topicService.deleteComment(commentId, req.user.id);
     res.status(204).send();
   } catch (error: unknown) {
     handleControllerError(error, res, next);
