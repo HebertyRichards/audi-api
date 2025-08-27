@@ -109,6 +109,25 @@ export async function updateTopic(req: AuthenticatedRequest, res: Response, next
   }
 }
 
+export async function updateCommentController(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Usuário não autenticado." });
+    }
+    const { content } = req.body;
+    const commentId = parseInt(req.params.commentId, 10);
+
+    if (isNaN(commentId) || !content) {
+      return res.status(400).json({ error: "ID de comentário inválido ou conteúdo inválido." });
+    }
+
+    const updatedComment = await topicService.updateComment(commentId, req.user.id, content);
+    res.status(200).json(updatedComment);
+  } catch (error: unknown) {
+    handleControllerError(error, res, next);
+  }
+}
+
 export async function getTopicsByCategory(req: Request, res: Response, next: NextFunction) {
   try {
     const { category } = req.params;

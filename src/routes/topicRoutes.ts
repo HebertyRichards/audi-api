@@ -12,5 +12,6 @@ router.get('/topics/slug/:slug', topicController.getTopicBySlug);
 router.delete('/topics/:id', authenticateUser, topicController.deleteTopic);
 router.patch('/topics/:id', authenticateUser, topicController.updateTopic);
 router.delete('/comments/:id', authenticateUser, topicController.deleteComment);
+router.patch('/comments/:commentId', authenticateUser, topicController.updateCommentController);
 
 export default router;

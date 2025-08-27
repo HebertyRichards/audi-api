@@ -27,11 +27,7 @@ export async function createTopic(
   const { data, error } = await supabase
     .from('topicos')
     .insert([{ title, content, author_id, category, slug }])
-    .select(`
-      id, title, content, author_id, category, slug,
-      created:created_in,
-      update:updated_in
-    `)
+    .select(`id, title, content, author_id, category, slug, created_in, updated_in`)
     .single();
 
     if (error) {
@@ -50,11 +46,7 @@ export async function createComment(
   const { data, error } = await supabase
     .from('comentarios')
     .insert([{ content, author_id, topic_id }]) 
-    .select(`
-      id, content, author_id,
-      topico_id:topic_id,
-      created:created_in
-    `)
+    .select(`*, profiles (username, avatar_url, role)`)
     .single();
 
   if (error) {
@@ -88,7 +80,7 @@ export async function deleteTopic(topicId: number, userId: string): Promise<void
 }
 
 export async function deleteComment(commentId: number, userId: string): Promise<void> {
-  const { error, count } = await supabase
+  const { error } = await supabase
     .from('comentarios')
     .delete()
     .match({ id: commentId, author_id: userId });
@@ -96,25 +88,13 @@ export async function deleteComment(commentId: number, userId: string): Promise<
   if (error) {
     throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao deletar o comentário.');
   }
-
-  if (count === 0 || count === null) {
-    throw new AppError('NOT_FOUND', 'Comentário não encontrado ou você não tem permissão para deletá-lo.');
-  }
 }
 
 async function getTopicByField(field: 'id' | 'slug', value: number | string) {
   const query = `
-    id, title, content, author_id, category, slug,
-    created:created_in,
-    update:updated_in,
+    id, title, content, author_id, category, slug, created_in, updated_in,
     profiles (username, avatar_url, role),
-    comentarios (
-      id, content, author_id,
-      topico_id:topic_id,
-      created:created_in,
-      profiles (username, avatar_url, role)
-    )
-  `;
+    comentarios (id, content, author_id, topic_id, created_in, profiles (username, avatar_url, role))`;
   const { data, error } = await supabase
     .from('topicos')
     .select(query)
@@ -142,10 +122,7 @@ export async function updateTopic(
     .update({ ...updates, updated_in: new Date() })
     .match({ id: topicId, author_id: userId })
     .select(`
-      id, title, content, author_id, category, slug,
-      created:created_in,
-      update:updated_in
-    `)
+      id, title, content, author_id, category, slug, created_in, updated_in`)
     .single();
 
   if (error || !data) {
@@ -155,17 +132,28 @@ export async function updateTopic(
   return data;
 }
 
+export async function updateComment(commentId: number, userId:string, content: string): Promise<Comment> {
+  const { data, error } = await supabase
+    .from('comentarios')
+    .update({ content: content, updated_in: new Date() }) 
+    .match({ id: commentId, author_id: userId }) 
+    .select(`*, profiles (username, avatar_url, role)`)
+    .single(); 
+
+  if (error || !data) {
+    console.error('Erro ao atualizar comentário:', error);
+    throw new AppError('UPDATE_ERROR', 'Não foi possível atualizar o comentário. Verifique suas permissões ou se o comentário existe.');
+  }
+
+  return data;
+}
+
 export async function getTopicsByCategory(categorySlug: string) {
   const { data, error } = await supabase
     .from('topicos')
-    .select(`
-      id,
-      title,
-      slug,
-      created_in,
+    .select(`id, title, slug, created_in,
       profiles ( username, avatar_url ),
-      comentarios ( count )
-    `)
+      comentarios ( count )`)
     .eq('category', categorySlug)
     .order('created_in', { ascending: false });
 
