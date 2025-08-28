@@ -22,10 +22,11 @@ router.delete(
     authenticateUser,
     profileController.deleteAvatarProfile 
 );
-router.post('/:id/follow', authenticateUser, profileController.follow);
-router.delete('/:id/follow', authenticateUser, profileController.unfollow);
-router.get('/:id/stats', profileController.getStats);
-router.get('/:id/followers', profileController.getFollowersList);
-router.get('/:id/following', profileController.getFollowingList);
+router.post('/:username/follow', authenticateUser, profileController.follow);
+router.delete('/:username/follow', authenticateUser, profileController.unfollow);
+router.get('/:username/stats', profileController.getStats);
+router.get('/:username/followers', profileController.getFollowersList);
+router.get('/:username/following', profileController.getFollowingList);
+router.get('/:username/is-following', authenticateUser, profileController.checkIsFollowing);
 
 export default router;
