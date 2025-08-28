@@ -16,6 +16,7 @@ export interface UserProfileData {
     avatar_url?: string;
     followers_count?: number;
     following_count?: number;
+    mensagens_count?: number;
   }
 
   export interface UserProfileWithoutId {

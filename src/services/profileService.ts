@@ -8,11 +8,11 @@ dotenv.config();
 export async function getProfileById(id: string): Promise<
 Pick<
   UserProfileData,
-  'username' | 'gender' | 'birthdate' | 'location' | 'website' | 'joined_at' | 'last_login' | 'total_posts' | 'role' | 'facebook' | 'instagram' | 'discord' | 'steam' | 'avatar_url' | 'followers_count' | 'following_count'
+  'username' | 'gender' | 'birthdate' | 'location' | 'website' | 'joined_at' | 'last_login' | 'total_posts' | 'role' | 'facebook' | 'instagram' | 'discord' | 'steam' | 'avatar_url' | 'followers_count' | 'following_count' | 'mensagens_count'
 >> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, gender, birthdate, location, website, joined_at, last_login, total_posts, role, facebook, instagram, discord, steam, avatar_url')
+    .select('username, gender, birthdate, location, website, joined_at, last_login, total_posts, role, facebook, instagram, discord, steam, avatar_url, mensagens_count')
     .eq('id', id)
     .single();
   
@@ -35,7 +35,7 @@ export async function getAllProfiles(page: number, limit: number): Promise<{ dat
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('username, role, joined_at, last_login, avatar_url')
+    .select('username, role, joined_at, last_login, avatar_url, mensagens_count')
     .range(from, to); 
   if (error) {
     throw new AppError('INTERNAL_SERVER_ERROR', 'Ocorreu um erro ao buscar a lista de usuários.');
@@ -91,7 +91,7 @@ export async function updateProfile(profile: Partial<UserProfileData> & { id: st
 export async function getUserProfileByUsername(username: string): Promise<UserProfileWithoutId> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, gender, birthdate, location, website, joined_at, last_login, total_posts, role, facebook, instagram, discord, steam, avatar_url, followers_count, following_count')
+    .select('username, gender, birthdate, location, website, joined_at, last_login, total_posts, role, facebook, instagram, discord, steam, avatar_url, followers_count, following_count')
     .eq('username', username)
     .single();
 
@@ -190,7 +190,8 @@ export async function deleteAvatar(userId: string) {
   return { message: 'Avatar removido com sucesso!', avatar_url: data.avatar_url };
 }
 
-export async function followUser(followerId: string, followingId: string) {
+export async function followUser(followerId: string, followingUsername: string) {
+  const followingId = await getUserIdByUsername(followingUsername);
   if (followerId === followingId) {
     throw new AppError('BAD_REQUEST', 'Você não pode seguir a si mesmo.');
   }
@@ -201,7 +202,7 @@ export async function followUser(followerId: string, followingId: string) {
   });
 
   if (error) {
-    if (error.code === '23505') { 
+    if (error.code === '23505') {
       throw new AppError('CONFLICT', 'Você já está seguindo este usuário.');
     }
     throw new AppError('INTERNAL_SERVER_ERROR', 'Não foi possível completar a ação de seguir.');
@@ -210,7 +211,8 @@ export async function followUser(followerId: string, followingId: string) {
   return { message: 'Usuário seguido com sucesso!' };
 }
 
-export async function unfollowUser(followerId: string, followingId:string) {
+export async function unfollowUser(followerId: string, followingUsername: string) {
+    const followingId = await getUserIdByUsername(followingUsername);
   if (followerId === followingId) {
     throw new AppError('BAD_REQUEST', 'Você não pode deixar de seguir a si mesmo.');
   }
@@ -229,7 +231,8 @@ export async function unfollowUser(followerId: string, followingId:string) {
   return { message: 'Você deixou de seguir o usuário.' };
 }
 
-export async function getFollowStats(userId: string) {
+export async function getFollowStats(username: string) { 
+  const userId = await getUserIdByUsername(username);
   const { data, error } = await supabase
     .from('profiles')
     .select('followers_count, following_count')
@@ -237,18 +240,15 @@ export async function getFollowStats(userId: string) {
     .single();
 
   if (error || !data) {
-    throw new AppError('NOT_FOUND', 'Usuário não encontrado.');
+    throw new AppError('NOT_FOUND', 'Estatísticas para este usuário não foram encontradas.');
   }
 
   return data;
 }
 
-export async function getFollowers(userId: string) {
-  const { data: userExists, error: userError } = await supabase.from('profiles').select('id').eq('id', userId).maybeSingle();
-  if (userError || !userExists) {
-      throw new AppError('NOT_FOUND', 'Usuário não encontrado.');
-  }
-  
+export async function getFollowers(username: string) {
+  const userId = await getUserIdByUsername(username);
+
   const { data, error } = await supabase
     .from('followers')
     .select('follower:profiles!followers_follower_id_fkey(id, username, avatar_url)')
@@ -261,15 +261,12 @@ export async function getFollowers(userId: string) {
   return data.map(item => item.follower);
 }
 
-export async function getFollowing(userId: string) {
-  const { data: userExists, error: userError } = await supabase.from('profiles').select('id').eq('id', userId).maybeSingle();
-  if (userError || !userExists) {
-      throw new AppError('NOT_FOUND', 'Usuário não encontrado.');
-  }
+export async function getFollowing(username: string) {
+  const userId = await getUserIdByUsername(username);
 
   const { data, error } = await supabase
     .from('followers')
-    .select('following:profiles!followers_following_id_fkey(id, username, avatar_url)')
+    .select('following:profiles!followers_following_id_fkey(username, avatar_url)')
     .eq('follower_id', userId);
 
   if (error) {
@@ -277,4 +274,74 @@ export async function getFollowing(userId: string) {
   }
 
   return data.map(item => item.following);
+}
+
+async function getUserIdByUsername(username: string): Promise<string> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('username', username)
+    .single();
+
+  if (error || !data) {
+    throw new AppError('NOT_FOUND', 'Usuário com este nome não foi encontrado.');
+  }
+  return data.id;
+}
+
+export async function checkFollowingStatus(followerId: string, followingUsername: string): Promise<{ isFollowing: boolean }> {
+  const followingId = await getUserIdByUsername(followingUsername);
+
+  const { data, error } = await supabase
+    .from('followers')
+    .select('follower_id')
+    .eq('follower_id', followerId)
+    .eq('following_id', followingId)
+    .maybeSingle();
+
+  if (error) {
+    throw new AppError('INTERNAL_SERVER_ERROR', 'Erro ao verificar status de seguir.');
+  }
+
+  return { isFollowing: !!data }; 
+}
+
+export async function getForumStats() {
+  const [
+    { count: activeMembers, error: membersError },
+    { count: totalTopics, error: topicsError },
+    { count: totalComments, error: commentsError },
+    { data: newestMember, error: newestMemberError },
+  ] = await Promise.all([
+    supabase.from('profiles').select('*', { count: 'exact', head: true }),
+    supabase.from('topicos').select('*', { count: 'exact', head: true }),
+    supabase.from('comentarios').select('*', { count: 'exact', head: true }),
+    supabase
+      .from('profiles')
+      .select('username, role')
+      .order('joined_at', { ascending: false })
+      .limit(1)
+      .single(),
+  ]);
+
+  if (membersError || topicsError || commentsError || newestMemberError) {
+    throw new AppError('INTERNAL_SERVER_ERROR', 'Erro ao calcular as estatísticas do fórum.');
+  }
+
+  return {
+    activeMembers: activeMembers ?? 0,
+    totalTopics: totalTopics ?? 0,
+    totalPosts: (totalTopics ?? 0) + (totalComments ?? 0),
+    newestMember: newestMember,
+  };
+}
+
+export async function getRecentPosts() {
+  const { data, error } = await supabase.rpc('get_recent_posts');
+
+  if (error) {
+    throw new AppError('INTERNAL_SERVER_ERROR', 'Erro ao buscar as publicações recentes.');
+  }
+
+  return data;
 }

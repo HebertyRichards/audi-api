@@ -4,8 +4,8 @@ export interface Topic {
     content: string;
     author_id: string;
     category: string;
-    created: string;
-    update: string | null;
+    created_in: string;
+    updated_in: string | null;
     slug: string;
   }
   
@@ -13,8 +13,9 @@ export interface Topic {
     id: number;
     content: string;
     author_id: string;
-    topico_id: number;
-    created: string;
+    topic_id: number;
+    created_in: string;
+    updated_in: string | null;
   }
   
   export interface Category {
