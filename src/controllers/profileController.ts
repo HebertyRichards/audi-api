@@ -156,3 +156,21 @@ export async function checkIsFollowing(req: AuthenticatedRequest, res: Response,
     handleControllerError(error, res, next);
   }
 }
+
+export async function getForumStats(req: Request, res: Response, next: NextFunction) {
+  try {
+    const stats = await profileService.getForumStats();
+    return res.status(200).json(stats);
+  } catch (error: unknown) {
+    handleControllerError(error, res, next);
+  }
+}
+
+export async function getRecentPosts(req: Request, res: Response, next: NextFunction) {
+  try {
+    const posts = await profileService.getRecentPosts();
+    return res.status(200).json(posts);
+  } catch (error: unknown) {
+    handleControllerError(error, res, next);
+  }
+}

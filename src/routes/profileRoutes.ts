@@ -7,7 +7,9 @@ import multer from 'multer';
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+router.get('/posts/recent', profileController.getRecentPosts);
 router.get('/user/all', profileController.getAllUsers)
+router.get('/forum/stats', profileController.getForumStats);
 router.get('/:id', profileController.getProfile);
 router.put('/update', authenticateUser, profileController.updateUserProfile);
 router.get('/user/:username', profileController.getUserProfile);
