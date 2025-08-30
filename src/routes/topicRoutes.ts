@@ -4,7 +4,6 @@ import { authenticateUser } from '../middlewares/authMiddleware';
 
 const router = Router();
 
-router.get('/topics/category/:category', topicController.getTopicsByCategory);
 router.post('/topics', authenticateUser,topicController.createTopic);
 router.post('/topics/:topicId/comments', authenticateUser, topicController.createComment);
 router.get('/topics/:id', topicController.getTopic);

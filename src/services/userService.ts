@@ -47,3 +47,29 @@ export async function getOnlineUsers() {
 
   return data;
 }
+
+export async function getAllProfiles(page: number, limit: number): Promise<{ data: Partial<UserProfileData>[]; totalCount: number }> {
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+  const { count, error: countError } = await supabase
+    .from('profiles')
+    .select('*', { count: 'exact', head: true });
+
+  if (countError) {
+    throw new AppError('INTERNAL_SERVER_ERROR', 'Ocorreu um erro ao contar os usuários.');
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('username, role, joined_at, last_login, avatar_url, mensagens_count')
+    .range(from, to); 
+  if (error) {
+    throw new AppError('INTERNAL_SERVER_ERROR', 'Ocorreu um erro ao buscar a lista de usuários.');
+  }
+  
+  if (!data || data.length === 0 && page > 1) {
+    throw new AppError('NOT_FOUND', 'Não há mais usuários para mostrar.');
+  }
+
+  return { data, totalCount: count ?? 0 };
+}

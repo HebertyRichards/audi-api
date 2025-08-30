@@ -127,13 +127,3 @@ export async function updateCommentController(req: AuthenticatedRequest, res: Re
     handleControllerError(error, res, next);
   }
 }
-
-export async function getTopicsByCategory(req: Request, res: Response, next: NextFunction) {
-  try {
-    const { category } = req.params;
-    const topics = await topicService.getTopicsByCategory(category);
-    res.status(200).json(topics);
-  } catch (error: unknown) {
-    handleControllerError(error, res, next);
-  }
-}

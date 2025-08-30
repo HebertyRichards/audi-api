@@ -32,3 +32,14 @@ export async function listOnlineUsers(req: Request, res: Response, next: NextFun
     handleControllerError(error, res, next);
   }
 }
+
+export async function getAllUsers(req: Request, res: Response, next: NextFunction) {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const result = await userService.getAllProfiles(page, limit);
+    res.status(200).json(result);
+  } catch (error: unknown) {
+    handleControllerError(error, res, next);
+  }
+}

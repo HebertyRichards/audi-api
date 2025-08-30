@@ -1,5 +1,6 @@
 import { supabase } from "../config/supabase";
-import { getUserIdByUsername, getForumStats } from "./profileService";
+import { getUserIdByUsername } from "./followService";
+import { getForumStats } from "./forumService";
 import { AppError } from '../helpers/ApiError';
 import dotenv from 'dotenv';
 

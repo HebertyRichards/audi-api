@@ -24,3 +24,19 @@ export async function getAllCategories(): Promise<Category[]> {
   return data || [];
 }
 
+export async function getTopicsByCategory(categorySlug: string) {
+  const { data, error } = await supabase
+    .from('topicos')
+    .select(`id, title, slug, created_in,
+      profiles ( username, avatar_url ),
+      comentarios ( count )`)
+    .eq('category', categorySlug)
+    .order('created_in', { ascending: false });
+
+  if (error) {
+    throw new AppError('DATABASE_ERROR', 'Não foi possível buscar os tópicos da categoria.');
+  }
+
+  return data || [];
+}
+

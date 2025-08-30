@@ -7,9 +7,6 @@ import multer from 'multer';
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-router.get('/posts/recent', profileController.getRecentPosts);
-router.get('/user/all', profileController.getAllUsers)
-router.get('/forum/stats', profileController.getForumStats);
 router.get('/:id', profileController.getProfile);
 router.put('/update', authenticateUser, profileController.updateUserProfile);
 router.get('/user/:username', profileController.getUserProfile);
@@ -24,11 +21,5 @@ router.delete(
     authenticateUser,
     profileController.deleteAvatarProfile 
 );
-router.post('/:username/follow', authenticateUser, profileController.follow);
-router.delete('/:username/follow', authenticateUser, profileController.unfollow);
-router.get('/:username/stats', profileController.getStats);
-router.get('/:username/followers', profileController.getFollowersList);
-router.get('/:username/following', profileController.getFollowingList);
-router.get('/:username/is-following', authenticateUser, profileController.checkIsFollowing);
 
 export default router;
