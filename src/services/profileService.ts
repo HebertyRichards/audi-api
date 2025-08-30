@@ -276,7 +276,7 @@ export async function getFollowing(username: string) {
   return data.map(item => item.following);
 }
 
-async function getUserIdByUsername(username: string): Promise<string> {
+export async function getUserIdByUsername(username: string): Promise<string> {
   const { data, error } = await supabase
     .from('profiles')
     .select('id')
