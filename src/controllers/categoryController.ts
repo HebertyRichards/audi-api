@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as categoryService from '../services/categoryService';
-import { handleControllerError } from '../helpers/ErrorUtils';
-
+import { handleControllerError } from '../middlewares/Errors';
 export async function getAllCategories(req: Request, res: Response, next: NextFunction) {
   try {
     const categories = await categoryService.getAllCategories();

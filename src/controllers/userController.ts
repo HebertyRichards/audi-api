@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as userService from '../services/userService';
 import { AuthenticatedRequest } from '../types/auth';
-import { handleControllerError } from '../helpers/ErrorUtils';
+import { handleControllerError } from '../middlewares/Errors';
 
 export async function GetLastRegistration(req: Request, res: Response, next: NextFunction) {
   try {

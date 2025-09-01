@@ -92,13 +92,14 @@ export async function getUserStats(username: string) {
     }
   
     const authorId = profile.id;
-
+  
     const { data, error } = await supabase
       .from('topicos')
       .select(`
         id, 
         title, 
         slug, 
+        category,
         created_in,
         profiles ( username, avatar_url ),
         comentarios ( count )

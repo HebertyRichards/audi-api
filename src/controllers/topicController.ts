@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as topicService from '../services/topicService';
 import { AuthenticatedRequest } from '../types/auth';
-import { handleControllerError } from '../helpers/ErrorUtils';
+import { handleControllerError } from '../middlewares/Errors';
 import { z } from 'zod';
 
 const createTopicSchema = z.object({

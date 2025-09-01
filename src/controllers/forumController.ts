@@ -1,7 +1,7 @@
-
 import { Request, Response, NextFunction } from 'express';
 import * as forumService from '../services/forumService';
-import { handleControllerError } from '../helpers/ErrorUtils';
+import { handleControllerError } from '../middlewares/Errors';
+
 export async function getForumStats(req: Request, res: Response, next: NextFunction) {
     try {
       const stats = await forumService.getForumStats();

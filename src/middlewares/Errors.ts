@@ -1,5 +1,5 @@
 import { Response, NextFunction } from 'express';
-import { AppError } from './ApiError';
+import { AppError } from '../helpers/ApiError';
 
 export function handleControllerError(error: unknown, res: Response, next: NextFunction) {
   if (error instanceof AppError) {
@@ -10,6 +10,7 @@ export function handleControllerError(error: unknown, res: Response, next: NextF
       case 'UNAUTHORIZED':
         return res.status(401).json({ error: error.message });
       case 'UPDATE_ERROR':
+      case 'FORBIDDEN_ERROR':
         return res.status(403).json({ error: error.message });
       case 'NOT_FOUND':
         return res.status(404).json({ error: error.message });

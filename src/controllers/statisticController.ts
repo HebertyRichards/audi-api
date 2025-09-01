@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import * as statisticService from "../services/statisticService"
-import { handleControllerError } from "../helpers/ErrorUtils";
+import { handleControllerError } from '../middlewares/Errors';
 
 export async function getUserStatsController(req: Request, res: Response, next: NextFunction) {
   try {

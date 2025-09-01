@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as followService from '../services/followService';
 import { AuthenticatedRequest } from '../types/auth';
-import { handleControllerError } from '../helpers/ErrorUtils';
-
+import { handleControllerError } from '../middlewares/Errors';
 
 export async function follow(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as profileService from '../services/profileService';
 import { AuthenticatedRequest } from '../types/auth';
-import { handleControllerError } from '../helpers/ErrorUtils';
+import { handleControllerError } from '../middlewares/Errors';
 
 export async function getProfile(req: Request, res: Response, next: NextFunction) {
   try {
