@@ -2,6 +2,7 @@ import { supabaseAdmin as supabase } from '../config/supabase';
 import { AppError } from '../helpers/ApiError';
 import { Topic, Comment } from '../types/topic';
 import * as categoryService from './categoryService';
+import * as uploadService from './uploadService'
 
 function generateSlug(title: string): string {
   const slugBase = title
@@ -124,37 +125,68 @@ export async function getTopicBySlugWithComments(slug: string) {
 }
 
 export async function deleteTopic(topicId: number, userId: string): Promise<void> {
-    const { error } = await supabase
-      .from('topicos')
-      .delete()
-      .match({ id: topicId, author_id: userId });
-  
-    if (error) {
-      throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao deletar o tópico.');
-    }
+  const { data: images, error: imageError } = await supabase
+    .from('imagens')
+    .select('url')
+    .eq('topic_id', topicId);
+
+  if (imageError) {
+      throw new AppError('DATABASE_ERROR', 'Falha ao buscar imagens do tópico para deletar.');
+  }
+
+  if (images && images.length > 0) {
+      const deletePromises = images.map(image => uploadService.deleteFile(image.url));
+      await Promise.all(deletePromises);
+  }
+
+  const { error } = await supabase
+    .from('topicos')
+    .delete()
+    .match({ id: topicId, author_id: userId });
+
+  if (error) {
+    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao deletar o tópico.');
+  }
 }
 
 export async function deleteComment(commentId: number, userId: string): Promise<void> {
-  const { error } = await supabase
-    .from('comentarios')
-    .delete()
-    .match({ id: commentId, author_id: userId });
+  const { data: images, error: imageError } = await supabase
+      .from('imagens')
+      .select('url')
+      .eq('comment_id', commentId);
 
-  if (error) {
-    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao deletar o comentário.');
+  if (imageError) {
+      throw new AppError('DATABASE_ERROR', 'Falha ao buscar imagens do comentário para deletar.');
   }
+
+  if (images && images.length > 0) {
+      const deletePromises = images.map(image => uploadService.deleteFile(image.url));
+      await Promise.all(deletePromises);
+  }
+
+  const { error } = await supabase
+  .from('comentarios')
+  .delete()
+  .match({ id: commentId, author_id: userId });
+
+if (error) {
+  throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao deletar o comentário.');
+}
 }
 
 async function getTopicByField(field: 'id' | 'slug', value: number | string): Promise<Topic> {
   const query = `
-  id, title, content, author_id, category, slug, created_in, updated_in,
-  profiles (username, avatar_url, role),
-  imagens (id, url),
-  comentarios (id, content, author_id, topic_id, created_in, profiles (username, avatar_url, role))`;
+    id, title, content, author_id, category, slug, created_in, updated_in,
+    profiles (username, avatar_url, role),
+    imagens (id, url),
+    comentarios (id, content, author_id, topic_id, created_in, profiles (username, avatar_url, role))
+  `;
+
   const { data, error } = await supabase
     .from('topicos')
     .select(query)
     .eq(field, value)
+    .order('created_in', { foreignTable: 'comentarios', ascending: true })
     .single();
 
   if (error) {

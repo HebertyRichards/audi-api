@@ -11,7 +11,6 @@ export interface UserProfileData {
     steam?: string;
     joined_at?: string;
     last_login?: string;
-    total_posts?: number;
     role?: string;
     avatar_url?: string;
     followers_count?: number;

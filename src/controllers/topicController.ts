@@ -17,7 +17,6 @@ const createCommentSchema = z.object({
     images: z.array(z.string().url("URL da imagem inválida.")).optional(),
 });
 
-
 export async function createTopic(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const validationResult = createTopicSchema.safeParse(req.body);
   if (!validationResult.success) {
@@ -27,8 +26,9 @@ export async function createTopic(req: AuthenticatedRequest, res: Response, next
     if (!req.user) {
       return res.status(401).json({ error: "Usuário não autenticado." });
     }
-    const { title, content, category, images } = validationResult.data;
-    const finalImageUrls: string[] = images || [];
+    const { title, category } = validationResult.data;
+    let finalContent = validationResult.data.content;
+    const finalImageUrls: string[] = [];
 
     if (req.files && Array.isArray(req.files)) {
         const files = req.files as Express.Multer.File[];
@@ -37,8 +37,12 @@ export async function createTopic(req: AuthenticatedRequest, res: Response, next
             finalImageUrls.push(uploadedUrl);
         }
     }
+
+    finalImageUrls.forEach(url => {
+        finalContent = finalContent.replace(/<img src="blob:[^"]+">/, `<img src="${url}">`);
+    });
     
-    const topic = await topicService.createTopic(title, content, req.user!.id, category, finalImageUrls);
+    const topic = await topicService.createTopic(title, finalContent, req.user!.id, category, finalImageUrls);
     res.status(201).json(topic);
   } catch (error: unknown) {
     handleControllerError(error, res, next);
@@ -54,8 +58,8 @@ export async function createComment(req: AuthenticatedRequest, res: Response, ne
     if (!req.user) {
       return res.status(401).json({ error: "Usuário não autenticado." });
     }
-    const { content, images } = validationResult.data;
-    const finalImageUrls: string[] = images || [];
+    let finalContent = validationResult.data.content;
+    const finalImageUrls: string[] = [];
     const topicId = parseInt(req.params.topicId, 10);
 
     if (isNaN(topicId)) {
@@ -70,7 +74,11 @@ export async function createComment(req: AuthenticatedRequest, res: Response, ne
         }
     }
     
-    const comment = await topicService.createComment(content, req.user.id, topicId, finalImageUrls);
+    finalImageUrls.forEach(url => {
+        finalContent = finalContent.replace(/<img src="blob:[^"]+">/, `<img src="${url}">`);
+    });
+
+    const comment = await topicService.createComment(finalContent, req.user.id, topicId, finalImageUrls);
     res.status(201).json(comment);
   } catch (error: unknown) {
     handleControllerError(error, res, next);

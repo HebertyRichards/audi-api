@@ -8,11 +8,11 @@ dotenv.config();
 export async function getProfileById(id: string): Promise<
 Pick<
   UserProfileData,
-  'username' | 'gender' | 'birthdate' | 'location' | 'website' | 'joined_at' | 'last_login' | 'total_posts' | 'role' | 'facebook' | 'instagram' | 'discord' | 'steam' | 'avatar_url' | 'followers_count' | 'following_count' | 'mensagens_count'
+  'username' | 'gender' | 'birthdate' | 'location' | 'website' | 'joined_at' | 'last_login' | 'role' | 'facebook' | 'instagram' | 'discord' | 'steam' | 'avatar_url' | 'followers_count' | 'following_count' | 'mensagens_count'
 >> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('username, gender, birthdate, location, website, joined_at, last_login, total_posts, role, facebook, instagram, discord, steam, avatar_url, mensagens_count')
+    .select('username, gender, birthdate, location, website, joined_at, last_login, role, facebook, instagram, discord, steam, avatar_url, mensagens_count')
     .eq('id', id)
     .single();
   
@@ -65,7 +65,7 @@ export async function updateProfile(profile: Partial<UserProfileData> & { id: st
 export async function getUserProfileByUsername(username: string): Promise<UserProfileWithoutId> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('username, gender, birthdate, location, website, joined_at, last_login, total_posts, role, facebook, instagram, discord, steam, avatar_url, followers_count, following_count')
+    .select('username, gender, birthdate, location, website, joined_at, last_login, role, facebook, instagram, discord, steam, avatar_url, followers_count, following_count')
     .eq('username', username)
     .single();
 

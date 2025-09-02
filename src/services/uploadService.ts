@@ -29,3 +29,18 @@ export async function uploadFile(file: Express.Multer.File): Promise<string> {
 
   return data.publicUrl;
 }
+
+export async function deleteFile(publicUrl: string): Promise<void> {
+  try {
+    const bucketName = 'images';
+    const filePath = publicUrl.substring(publicUrl.indexOf(`/${bucketName}/`) + bucketName.length + 2);
+
+    const { error } = await supabaseAdmin.storage
+      .from(bucketName)
+      .remove([filePath]);
+
+    if (error) {
+    }
+  } catch {
+  }
+}
