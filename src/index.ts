@@ -29,7 +29,7 @@ app.use('/categories', categoryRoutes);
 app.use('/statistic',  statisticRoutes)
 app.use('/follow', followRoutes)
 app.use('/forum', forumRoutes)
-app.use('permission', permissionRoutes)
+app.use('/permission', permissionRoutes)
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
