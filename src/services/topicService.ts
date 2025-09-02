@@ -23,6 +23,18 @@ export async function createTopic(
     throw new AppError('VALIDATION_ERROR', `A categoria '${category}' não é válida.`);
   }
 
+  const { data: canCreate, error: rpcError } = await supabase.rpc('can_create_topic', {
+    p_user_id: author_id,
+    p_category_slug: category,
+  });
+
+  if (rpcError) {
+    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao verificar as permissões.');
+  }
+  if (!canCreate) {
+    throw new AppError('FORBIDDEN_ERROR', 'Você não tem permissão para criar tópicos nesta categoria.');
+  }
+
   const slug = generateSlug(title);
   const { data, error } = await supabase
     .from('topicos')
@@ -43,6 +55,18 @@ export async function createComment(
   author_id: string,
   topic_id: number
 ): Promise<Comment> {
+  const { data: canComment, error: rpcError } = await supabase.rpc('can_create_comment', {
+    p_user_id: author_id,
+    p_topic_id: topic_id,
+  });
+
+  if (rpcError) {
+    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao verificar as permissões para comentar.');
+  }
+  if (!canComment) {
+    throw new AppError('FORBIDDEN_ERROR', 'Você não tem permissão para comentar neste tópico.');
+  }
+
   const { data, error } = await supabase
     .from('comentarios')
     .insert([{ content, author_id, topic_id }]) 
@@ -148,18 +172,34 @@ export async function updateComment(commentId: number, userId:string, content: s
   return data;
 }
 
-export async function getTopicsByCategory(categorySlug: string) {
-  const { data, error } = await supabase
-    .from('topicos')
-    .select(`id, title, slug, created_in,
-      profiles ( username, avatar_url ),
-      comentarios ( count )`)
-    .eq('category', categorySlug)
-    .order('created_in', { ascending: false });
+export async function checkTopicCreationPermission(
+  author_id: string,
+  category: string
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc('can_create_topic', {
+    p_user_id: author_id,
+    p_category_slug: category,
+  });
 
   if (error) {
-    throw new AppError('DATABASE_ERROR', 'Não foi possível buscar os tópicos da categoria.');
+    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao verificar a permissão para criar tópico.');
   }
 
-  return data || [];
+  return data;
+}
+
+export async function checkCommentCreationPermission(
+  author_id: string,
+  topic_id: number
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc('can_create_comment', {
+    p_user_id: author_id,
+    p_topic_id: topic_id,
+  });
+
+  if (error) {
+    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao verificar a permissão para criar comentário.');
+  }
+
+  return data;
 }

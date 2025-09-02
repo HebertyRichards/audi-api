@@ -7,6 +7,10 @@ import profileRoutes from './routes/profileRoutes';
 import userRoutes from './routes/userRoutes';
 import topicRoutes from './routes/topicRoutes';
 import categoryRoutes from './routes/categoryRoutes';
+import statisticRoutes from './routes/statisticRoutes'
+import followRoutes from "./routes/followRoutes"
+import forumRoutes from "./routes/forumRoutes"
+import permissionRoutes from './routes/permissionRoutes'
 
 dotenv.config();
 
@@ -22,6 +26,10 @@ app.use('/profile', profileRoutes);
 app.use('/user', userRoutes);
 app.use('/posts', topicRoutes);
 app.use('/categories', categoryRoutes);
+app.use('/statistic',  statisticRoutes)
+app.use('/follow', followRoutes)
+app.use('/forum', forumRoutes)
+app.use('/permission', permissionRoutes)
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);

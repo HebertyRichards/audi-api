@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import * as authService from '../services/authService';
 import * as cookie from 'cookie';
 import { supabase } from '../config/supabase';
-import { handleControllerError } from '../helpers/ErrorUtils';
+import { handleControllerError } from '../middlewares/Errors';
 import { AuthenticatedRequest } from '../types/auth';
 
 const createCookie = (name: string, value: string, maxAge: number): string => {

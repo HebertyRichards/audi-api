@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as topicService from '../services/topicService';
 import { AuthenticatedRequest } from '../types/auth';
-import { handleControllerError } from '../helpers/ErrorUtils';
+import { handleControllerError } from '../middlewares/Errors';
 import { z } from 'zod';
 
 const createTopicSchema = z.object({
@@ -123,16 +123,6 @@ export async function updateCommentController(req: AuthenticatedRequest, res: Re
 
     const updatedComment = await topicService.updateComment(commentId, req.user.id, content);
     res.status(200).json(updatedComment);
-  } catch (error: unknown) {
-    handleControllerError(error, res, next);
-  }
-}
-
-export async function getTopicsByCategory(req: Request, res: Response, next: NextFunction) {
-  try {
-    const { category } = req.params;
-    const topics = await topicService.getTopicsByCategory(category);
-    res.status(200).json(topics);
   } catch (error: unknown) {
     handleControllerError(error, res, next);
   }
