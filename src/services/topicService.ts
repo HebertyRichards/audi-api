@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabase';
+import { supabaseAdmin as supabase } from '../config/supabase';
 import { AppError } from '../helpers/ApiError';
 import { Topic, Comment } from '../types/topic';
 import * as categoryService from './categoryService';
@@ -8,15 +8,16 @@ function generateSlug(title: string): string {
     .toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/ /g, '-')
-    .replace(/[^\w-]+/g, ''); 
-  return `${slugBase}-${Date.now()}`; 
+    .replace(/[^\w-]+/g, '');
+  return `${slugBase}-${Date.now()}`;
 }
 
 export async function createTopic(
   title: string,
   content: string,
   author_id: string,
-  category: string 
+  category: string,
+  images?: string[]
 ): Promise<Topic> {
   const isValidCategory = await categoryService.categoryExists(category);
   if (!isValidCategory) {
@@ -36,70 +37,100 @@ export async function createTopic(
   }
 
   const slug = generateSlug(title);
-  const { data, error } = await supabase
+  const { data: topicData, error: topicError } = await supabase
     .from('topicos')
     .insert([{ title, content, author_id, category, slug }])
-    .select(`id, title, content, author_id, category, slug, created_in, updated_in`)
+    .select()
     .single();
 
-    if (error) {
-      throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao criar o tópico.');
+  if (topicError || !topicData) {
+    throw new AppError('DATABASE_ERROR', 'Erro ao criar tópico.');
+  }
+
+  if (images && images.length > 0) {
+    const imagesToInsert = images.map(url => ({
+      url,
+      topic_id: topicData.id,
+      author_id,
+    }));
+    const { error: imageError } = await supabase.from('imagens').insert(imagesToInsert);
+    if (imageError) {
+      throw new AppError('DATABASE_ERROR', 'Erro ao salvar imagens do tópico.');
     }
+  }
 
-  return data;
+  return topicData;
 }
-
 
 export async function createComment(
   content: string,
   author_id: string,
-  topic_id: number
+  topic_id: number,
+  images?: string[]
 ): Promise<Comment> {
   const { data: canComment, error: rpcError } = await supabase.rpc('can_create_comment', {
     p_user_id: author_id,
-    p_topic_id: topic_id,
+    p_topic_id: topic_id
   });
 
   if (rpcError) {
-    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao verificar as permissões para comentar.');
+      throw new AppError('DATABASE_ERROR', 'Erro ao verificar permissões de comentário.');
   }
   if (!canComment) {
-    throw new AppError('FORBIDDEN_ERROR', 'Você não tem permissão para comentar neste tópico.');
+      throw new AppError('FORBIDDEN_ERROR', 'Você não tem permissão para comentar neste tópico.');
   }
 
-  const { data, error } = await supabase
+  const { data: commentData, error: commentError } = await supabase
     .from('comentarios')
-    .insert([{ content, author_id, topic_id }]) 
-    .select(`*, profiles (username, avatar_url, role)`)
+    .insert([{ content, author_id, topic_id }])
+    .select()
     .single();
 
-  if (error) {
-    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao criar o comentário.');
+  if (commentError || !commentData) {
+    throw new AppError('DATABASE_ERROR', 'Erro ao criar comentário.');
   }
 
-  return data;
+  if (images && images.length > 0) {
+    const imagesToInsert = images.map(url => ({
+      url,
+      comment_id: commentData.id,
+      author_id,
+    }));
+    const { error: imageError } = await supabase.from('imagens').insert(imagesToInsert);
+    if (imageError) {
+      throw new AppError('DATABASE_ERROR', 'Erro ao salvar imagens do comentário.');
+    }
+  }
+
+  const { data: fullComment, error: fetchError } = await supabase
+    .from('comentarios')
+    .select(`*, profiles (username, avatar_url, role), imagens(id, url)`)
+    .eq('id', commentData.id)
+    .single();
+
+  if (fetchError || !fullComment) {
+    throw new AppError('DATABASE_ERROR', 'Erro ao buscar dados completos do comentário.');
+  }
+  
+  return fullComment;
 }
 
 export async function getTopicWithComments(topicId: number) {
-  return getTopicByField('id', topicId);
+    return getTopicByField('id', topicId);
 }
 
 export async function getTopicBySlugWithComments(slug: string) {
-  return getTopicByField('slug', slug);
+    return getTopicByField('slug', slug);
 }
 
 export async function deleteTopic(topicId: number, userId: string): Promise<void> {
-    const { error, count } = await supabase
+    const { error } = await supabase
       .from('topicos')
       .delete()
       .match({ id: topicId, author_id: userId });
   
     if (error) {
       throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao deletar o tópico.');
-    }
-  
-    if (count === 0) {
-      throw new AppError('NOT_FOUND', 'Tópico não encontrado ou você não tem permissão para deletá-lo.');
     }
 }
 
@@ -114,11 +145,12 @@ export async function deleteComment(commentId: number, userId: string): Promise<
   }
 }
 
-async function getTopicByField(field: 'id' | 'slug', value: number | string) {
+async function getTopicByField(field: 'id' | 'slug', value: number | string): Promise<Topic> {
   const query = `
-    id, title, content, author_id, category, slug, created_in, updated_in,
-    profiles (username, avatar_url, role),
-    comentarios (id, content, author_id, topic_id, created_in, profiles (username, avatar_url, role))`;
+  id, title, content, author_id, category, slug, created_in, updated_in,
+  profiles (username, avatar_url, role),
+  imagens (id, url),
+  comentarios (id, content, author_id, topic_id, created_in, profiles (username, avatar_url, role))`;
   const { data, error } = await supabase
     .from('topicos')
     .select(query)
@@ -126,14 +158,14 @@ async function getTopicByField(field: 'id' | 'slug', value: number | string) {
     .single();
 
   if (error) {
-    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao buscar o tópico.');
+    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao buscar o tópico no banco de dados.');
   }
 
   if (!data) {
     throw new AppError('NOT_FOUND', 'Tópico não encontrado.');
   }
 
-  return data;
+  return data as unknown as Topic;
 }
 
 export async function updateTopic(
@@ -145,14 +177,12 @@ export async function updateTopic(
     .from('topicos')
     .update({ ...updates, updated_in: new Date() })
     .match({ id: topicId, author_id: userId })
-    .select(`
-      id, title, content, author_id, category, slug, created_in, updated_in`)
+    .select()
     .single();
 
   if (error || !data) {
-    throw new AppError('UPDATE_ERROR', 'Não foi possível atualizar o tópico. Verifique suas permissões.');
+    throw new AppError('UPDATE_ERROR', 'Não foi possível atualizar o tópico.');
   }
-
   return data;
 }
 
@@ -161,44 +191,11 @@ export async function updateComment(commentId: number, userId:string, content: s
     .from('comentarios')
     .update({ content: content, updated_in: new Date() }) 
     .match({ id: commentId, author_id: userId }) 
-    .select(`*, profiles (username, avatar_url, role)`)
+    .select(`*, profiles (username, avatar_url, role), imagens(id, url)`)
     .single(); 
 
   if (error || !data) {
-    console.error('Erro ao atualizar comentário:', error);
-    throw new AppError('UPDATE_ERROR', 'Não foi possível atualizar o comentário. Verifique suas permissões ou se o comentário existe.');
-  }
-
-  return data;
-}
-
-export async function checkTopicCreationPermission(
-  author_id: string,
-  category: string
-): Promise<boolean> {
-  const { data, error } = await supabase.rpc('can_create_topic', {
-    p_user_id: author_id,
-    p_category_slug: category,
-  });
-
-  if (error) {
-    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao verificar a permissão para criar tópico.');
-  }
-
-  return data;
-}
-
-export async function checkCommentCreationPermission(
-  author_id: string,
-  topic_id: number
-): Promise<boolean> {
-  const { data, error } = await supabase.rpc('can_create_comment', {
-    p_user_id: author_id,
-    p_topic_id: topic_id,
-  });
-
-  if (error) {
-    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao verificar a permissão para criar comentário.');
+    throw new AppError('UPDATE_ERROR', 'Não foi possível atualizar o comentário.');
   }
 
   return data;
