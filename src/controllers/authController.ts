@@ -6,13 +6,15 @@ import { handleControllerError } from '../middlewares/Errors';
 import { AuthenticatedRequest } from '../types/auth';
 
 const createCookie = (name: string, value: string, maxAge: number): string => {
+  const isProduction = process.env.NODE_ENV === 'production';
+
   return cookie.serialize(name, value, {
     httpOnly: true,
     maxAge: maxAge,
     path: '/',
-    sameSite: 'none',
-    secure: process.env.NODE_ENV === 'production',
-    partitioned: true,
+    sameSite: isProduction ? 'none' : 'lax', 
+    secure: isProduction,
+    partitioned: isProduction,
   });
 };
 
