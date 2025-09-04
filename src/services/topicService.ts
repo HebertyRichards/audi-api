@@ -176,7 +176,7 @@ if (error) {
 
 async function getTopicByField(field: 'id' | 'slug', value: number | string): Promise<Topic> {
   const query = `
-    id, title, content, author_id, category, slug, created_in, updated_in,
+    title, content, author_id, category, slug, created_in, updated_in,
     profiles (username, avatar_url, role),
     imagens (id, url),
     comentarios (id, content, author_id, topic_id, created_in, profiles (username, avatar_url, role))

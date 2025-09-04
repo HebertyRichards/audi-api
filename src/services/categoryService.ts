@@ -27,7 +27,7 @@ export async function getAllCategories(): Promise<Category[]> {
 export async function getTopicsByCategory(categorySlug: string) {
   const { data, error } = await supabase
     .from('topicos')
-    .select(`id, title, slug, created_in,
+    .select(`title, slug, created_in,
       profiles ( username, avatar_url ),
       comentarios ( count )`)
     .eq('category', categorySlug)

@@ -96,7 +96,6 @@ export async function getUserStats(username: string) {
     const { data, error } = await supabase
       .from('topicos')
       .select(`
-        id, 
         title, 
         slug, 
         category,

@@ -38,7 +38,7 @@ export async function upsertOnlineUser(userId: string) {
 export async function getOnlineUsers() {
   const { data, error } = await supabase
     .from("online_users")
-    .select("user_id, last_seen_at, profiles(username, role, avatar_url)")
+    .select("last_seen_at, profiles(username, role, avatar_url)")
     .gt("last_seen_at", new Date(Date.now() - 2 * 60 * 1000).toISOString());
 
   if (error) {
