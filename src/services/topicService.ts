@@ -116,12 +116,12 @@ export async function createComment(
   return fullComment;
 }
 
-export async function getTopicWithComments(topicId: number) {
-    return getTopicByField('id', topicId);
+export async function getTopicWithComments(topicId: number, page: number, limit: number = 10) {
+  return getTopicByField('id', topicId, page, limit);
 }
 
-export async function getTopicBySlugWithComments(slug: string) {
-    return getTopicByField('slug', slug);
+export async function getTopicBySlugWithComments(slug: string, page: number, limit: number = 10) {
+  return getTopicByField('slug', slug, page, limit);
 }
 
 export async function deleteTopic(topicId: number, userId: string): Promise<void> {
@@ -174,30 +174,56 @@ if (error) {
 }
 }
 
-async function getTopicByField(field: 'id' | 'slug', value: number | string): Promise<Topic> {
-  const query = `
-    id, title, content, author_id, category, slug, created_in, updated_in,
-    profiles (username, avatar_url, role),
-    imagens (id, url),
-    comentarios (id, content, author_id, topic_id, created_in, profiles (username, avatar_url, role))
-  `;
-
-  const { data, error } = await supabase
+async function getTopicByField(
+  field: 'id' | 'slug',
+  value: number | string,
+  page: number,
+  limit: number = 10
+) {
+  const { data: topicData, error: topicError } = await supabase
     .from('topicos')
-    .select(query)
+    .select(`
+      *,
+      profiles (username, avatar_url, role),
+      imagens (id, url),
+      comment_count:comentarios(count)
+    `)
     .eq(field, value)
-    .order('created_in', { foreignTable: 'comentarios', ascending: true })
     .single();
 
-  if (error) {
-    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao buscar o tópico no banco de dados.');
+  if (topicError) {
+    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao buscar o tópico.');
   }
 
-  if (!data) {
+  if (!topicData) {
     throw new AppError('NOT_FOUND', 'Tópico não encontrado.');
   }
 
-  return data as unknown as Topic;
+  const totalComments = topicData.comment_count[0]?.count ?? 0;
+  delete topicData.comment_count;
+  const commentsFrom = (page - 1) * limit;
+  const commentsTo = commentsFrom + limit - 1;
+
+  const { data: paginatedComments, error: commentsError } = await supabase
+    .from('comentarios')
+    .select(`
+      id, content, author_id, topic_id, created_in,
+      profiles (username, avatar_url, role)
+    `)
+    .eq('topic_id', topicData.id) 
+    .order('created_in', { ascending: true })
+    .range(commentsFrom, commentsTo);
+
+  if (commentsError) {
+    throw new AppError('DATABASE_ERROR', 'Ocorreu um erro ao buscar os comentários.');
+  }
+
+  const finalTopicData = {
+    ...topicData,
+    comentarios: paginatedComments || [],
+  };
+
+  return { data: finalTopicData, totalComments };
 }
 
 export async function updateTopic(
