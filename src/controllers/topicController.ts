@@ -88,8 +88,13 @@ export async function createComment(req: AuthenticatedRequest, res: Response, ne
 export async function getTopic(req: Request, res: Response, next: NextFunction) {
   try {
     const topicId = parseInt(req.params.id, 10);
-    if (isNaN(topicId)) return res.status(400).json({ error: 'ID de tópico inválido.' });
-    const topic = await topicService.getTopicWithComments(topicId);
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 10;
+
+    if (isNaN(topicId)) {
+      return res.status(400).json({ error: 'ID de tópico inválido.' });
+    }
+    const topic = await topicService.getTopicWithComments(topicId, page, limit);
     res.status(200).json(topic);
   } catch (error: unknown) {
     handleControllerError(error, res, next);
@@ -99,10 +104,13 @@ export async function getTopic(req: Request, res: Response, next: NextFunction) 
 export async function getTopicBySlug(req: Request, res: Response, next: NextFunction) {
   try {
     const { slug } = req.params;
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 10;
+
     if (!slug) {
-        return res.status(400).json({ error: "Slug é obrigatório." });
+      return res.status(400).json({ error: "Slug é obrigatório." });
     }
-    const topic = await topicService.getTopicBySlugWithComments(slug);
+    const topic = await topicService.getTopicBySlugWithComments(slug, page, limit);
     res.status(200).json(topic);
   } catch (error: unknown) {
     handleControllerError(error, res, next);

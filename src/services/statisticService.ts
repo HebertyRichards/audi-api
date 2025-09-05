@@ -107,7 +107,6 @@ export async function getUserStats(username: string) {
       .order('created_in', { ascending: false });
   
     if (error) {
-      console.error("Supabase error getting topics:", error);
       throw new AppError('DATABASE_ERROR', 'Não foi possível buscar os tópicos do usuário.');
     }
   
