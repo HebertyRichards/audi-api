@@ -26,20 +26,26 @@ export async function followUser(followerId: string, followingUsername: string) 
 }
 
 export async function unfollowUser(followerId: string, followingUsername: string) {
-    const followingId = await getUserIdByUsername(followingUsername);
+  const followingId = await getUserIdByUsername(followingUsername);
   if (followerId === followingId) {
     throw new AppError('BAD_REQUEST', 'Você não pode deixar de seguir a si mesmo.');
   }
-  const { error } = await supabase.rpc('handle_unfollow', {
-    follower_uuid: followerId,
-    following_uuid: followingId,
-  });
+
+  const { error, count } = await supabase
+    .from('followers')
+    .update({ is_active: false })
+    .match({ 
+      follower_id: followerId, 
+      following_id: followingId,
+      is_active: true 
+    });
 
   if (error) {
-    if (error.message.includes('NOT_FOUND')) {
-      throw new AppError('NOT_FOUND', 'Você não está seguindo este usuário.');
-    }
     throw new AppError('INTERNAL_SERVER_ERROR', 'Não foi possível completar a ação de deixar de seguir.');
+  }
+
+  if (count === 0) {
+      throw new AppError('NOT_FOUND', 'Você não está seguindo este usuário.');
   }
 
   return { message: 'Você deixou de seguir o usuário.' };
@@ -66,8 +72,9 @@ export async function getFollowers(username: string) {
   const { data, error } = await supabase
     .from('followers')
     .select('follower:profiles!followers_follower_id_fkey(id, username, avatar_url)')
-    .eq('following_id', userId);
-  
+    .eq('following_id', userId)
+    .eq('is_active', true); //
+
   if (error) {
     throw new AppError('INTERNAL_SERVER_ERROR', 'Erro ao buscar seguidores.');
   }
@@ -81,7 +88,8 @@ export async function getFollowing(username: string) {
   const { data, error } = await supabase
     .from('followers')
     .select('following:profiles!followers_following_id_fkey(username, avatar_url)')
-    .eq('follower_id', userId);
+    .eq('follower_id', userId)
+    .eq('is_active', true);
 
   if (error) {
     throw new AppError('INTERNAL_SERVER_ERROR', 'Erro ao buscar usuários que você segue.');
@@ -111,6 +119,7 @@ export async function checkFollowingStatus(followerId: string, followingUsername
     .select('follower_id')
     .eq('follower_id', followerId)
     .eq('following_id', followingId)
+    .eq('is_active', true) 
     .maybeSingle();
 
   if (error) {
@@ -118,4 +127,31 @@ export async function checkFollowingStatus(followerId: string, followingUsername
   }
 
   return { isFollowing: !!data }; 
+}
+
+export async function removeFollower(removerId: string, followerUsername: string) {
+  const followerId = await getUserIdByUsername(followerUsername);
+
+  if (removerId === followerId) {
+    throw new AppError('BAD_REQUEST', 'Ação inválida.');
+  }
+
+  const { error, count } = await supabase
+    .from('followers')
+    .update({ is_active: false })
+    .match({ 
+      follower_id: followerId,
+      following_id: removerId,
+      is_active: true
+    });
+
+  if (error) {
+    throw new AppError('INTERNAL_SERVER_ERROR', 'Não foi possível remover o seguidor.');
+  }
+
+  if (count === 0) {
+    throw new AppError('NOT_FOUND', 'Este usuário não está te seguindo.');
+  }
+
+  return { message: 'Seguidor removido com sucesso!' };
 }

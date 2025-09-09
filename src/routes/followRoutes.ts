@@ -11,5 +11,6 @@ router.get('/:username/stats', followController.getStats);
 router.get('/:username/followers', followController.getFollowersList);
 router.get('/:username/following', followController.getFollowingList);
 router.get('/:username/is-following', authenticateUser, followController.checkIsFollowing);
+router.delete('/followers/:username', authenticateUser, followController.handleRemoveFollower );
 
 export default router;

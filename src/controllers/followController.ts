@@ -74,3 +74,23 @@ export async function follow(req: AuthenticatedRequest, res: Response, next: Nex
       handleControllerError(error, res, next);
     }
   }
+
+  export async function handleRemoveFollower(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+
+      if (!req.user) {
+        return res.status(401).json({ error: "Usuário não autenticado." });
+      }
+      const removerId = req.user.id;
+      const followerUsername = req.params.username;
+  
+      if (!followerUsername) {
+          return res.status(400).json({ error: "O nome de usuário do seguidor é obrigatório na URL." });
+      }
+      const result = await followService.removeFollower(removerId, followerUsername);
+      res.status(200).json(result);
+    } catch (error: unknown) {
+      handleControllerError(error, res, next);
+    }
+  }
+  
