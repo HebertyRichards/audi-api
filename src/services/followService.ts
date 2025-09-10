@@ -31,21 +31,13 @@ export async function unfollowUser(followerId: string, followingUsername: string
     throw new AppError('BAD_REQUEST', 'Você não pode deixar de seguir a si mesmo.');
   }
 
-  const { error, count } = await supabase
-    .from('followers')
-    .update({ is_active: false })
-    .match({ 
-      follower_id: followerId, 
-      following_id: followingId,
-      is_active: true 
-    });
+  const { error } = await supabase.rpc('handle_unfollow', {
+    follower_uuid: followerId,
+    following_uuid: followingId,
+  });
 
   if (error) {
     throw new AppError('INTERNAL_SERVER_ERROR', 'Não foi possível completar a ação de deixar de seguir.');
-  }
-
-  if (count === 0) {
-      throw new AppError('NOT_FOUND', 'Você não está seguindo este usuário.');
   }
 
   return { message: 'Você deixou de seguir o usuário.' };
@@ -72,8 +64,7 @@ export async function getFollowers(username: string) {
   const { data, error } = await supabase
     .from('followers')
     .select('follower:profiles!followers_follower_id_fkey(id, username, avatar_url)')
-    .eq('following_id', userId)
-    .eq('is_active', true); //
+    .eq('following_id', userId);
 
   if (error) {
     throw new AppError('INTERNAL_SERVER_ERROR', 'Erro ao buscar seguidores.');
@@ -88,8 +79,7 @@ export async function getFollowing(username: string) {
   const { data, error } = await supabase
     .from('followers')
     .select('following:profiles!followers_following_id_fkey(username, avatar_url)')
-    .eq('follower_id', userId)
-    .eq('is_active', true);
+    .eq('follower_id', userId);
 
   if (error) {
     throw new AppError('INTERNAL_SERVER_ERROR', 'Erro ao buscar usuários que você segue.');
@@ -119,14 +109,13 @@ export async function checkFollowingStatus(followerId: string, followingUsername
     .select('follower_id')
     .eq('follower_id', followerId)
     .eq('following_id', followingId)
-    .eq('is_active', true) 
     .maybeSingle();
 
   if (error) {
     throw new AppError('INTERNAL_SERVER_ERROR', 'Erro ao verificar status de seguir.');
   }
 
-  return { isFollowing: !!data }; 
+  return { isFollowing: !!data };
 }
 
 export async function removeFollower(removerId: string, followerUsername: string) {
