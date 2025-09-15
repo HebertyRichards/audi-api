@@ -26,19 +26,17 @@ export async function followUser(followerId: string, followingUsername: string) 
 }
 
 export async function unfollowUser(followerId: string, followingUsername: string) {
-    const followingId = await getUserIdByUsername(followingUsername);
+  const followingId = await getUserIdByUsername(followingUsername);
   if (followerId === followingId) {
     throw new AppError('BAD_REQUEST', 'Você não pode deixar de seguir a si mesmo.');
   }
+
   const { error } = await supabase.rpc('handle_unfollow', {
     follower_uuid: followerId,
     following_uuid: followingId,
   });
 
   if (error) {
-    if (error.message.includes('NOT_FOUND')) {
-      throw new AppError('NOT_FOUND', 'Você não está seguindo este usuário.');
-    }
     throw new AppError('INTERNAL_SERVER_ERROR', 'Não foi possível completar a ação de deixar de seguir.');
   }
 
@@ -67,7 +65,7 @@ export async function getFollowers(username: string) {
     .from('followers')
     .select('follower:profiles!followers_follower_id_fkey(id, username, avatar_url)')
     .eq('following_id', userId);
-  
+
   if (error) {
     throw new AppError('INTERNAL_SERVER_ERROR', 'Erro ao buscar seguidores.');
   }
@@ -117,5 +115,31 @@ export async function checkFollowingStatus(followerId: string, followingUsername
     throw new AppError('INTERNAL_SERVER_ERROR', 'Erro ao verificar status de seguir.');
   }
 
-  return { isFollowing: !!data }; 
+  return { isFollowing: !!data };
+}
+
+export async function removeFollower(removerId: string, followerUsername: string) {
+  const followerId = await getUserIdByUsername(followerUsername);
+
+  if (removerId === followerId) {
+    throw new AppError('BAD_REQUEST', 'Ação inválida.');
+  }
+
+  const { error, count } = await supabase
+    .from('followers')
+    .delete()
+    .match({
+      follower_id: followerId,
+      following_id: removerId,
+    });
+
+  if (error) {
+    throw new AppError('INTERNAL_SERVER_ERROR', 'Não foi possível remover o seguidor.');
+  }
+
+  if (count === 0) {
+    throw new AppError('NOT_FOUND', 'Este usuário não está te seguindo ou a ação não foi permitida.');
+  }
+
+  return { message: 'Seguidor removido com sucesso!' };
 }
