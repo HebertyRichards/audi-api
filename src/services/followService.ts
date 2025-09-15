@@ -127,11 +127,10 @@ export async function removeFollower(removerId: string, followerUsername: string
 
   const { error, count } = await supabase
     .from('followers')
-    .update({ is_active: false })
-    .match({ 
+    .delete()
+    .match({
       follower_id: followerId,
       following_id: removerId,
-      is_active: true
     });
 
   if (error) {
@@ -139,7 +138,7 @@ export async function removeFollower(removerId: string, followerUsername: string
   }
 
   if (count === 0) {
-    throw new AppError('NOT_FOUND', 'Este usuário não está te seguindo.');
+    throw new AppError('NOT_FOUND', 'Este usuário não está te seguindo ou a ação não foi permitida.');
   }
 
   return { message: 'Seguidor removido com sucesso!' };

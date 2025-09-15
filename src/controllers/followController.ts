@@ -90,6 +90,7 @@ export async function follow(req: AuthenticatedRequest, res: Response, next: Nex
       const result = await followService.removeFollower(removerId, followerUsername);
       res.status(200).json(result);
     } catch (error: unknown) {
+      console.log("erro:" , error)
       handleControllerError(error, res, next);
     }
   }
