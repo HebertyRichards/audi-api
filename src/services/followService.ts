@@ -63,7 +63,7 @@ export async function getFollowers(username: string) {
 
   const { data, error } = await supabase
     .from('followers')
-    .select('follower:profiles!followers_follower_id_fkey(id, username, avatar_url)')
+    .select('follower:profiles!followers_follower_id_fkey(username, avatar_url)')
     .eq('following_id', userId);
 
   if (error) {

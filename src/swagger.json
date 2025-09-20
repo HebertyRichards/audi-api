@@ -1,0 +1,1420 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+      "title": "API do Fórum",
+      "version": "1.0.0",
+      "description": "Documentação da API para o projeto de fórum."
+    },
+    "servers": [
+      {
+        "url": "http://localhost:8080",
+        "description": "Servidor de Desenvolvimento"
+      }
+    ],
+    "tags": [
+      {
+        "name": "Autenticação",
+        "description": "Endpoints para gerenciamento de usuários, sessões e autenticação."
+      },
+      {
+        "name": "Fórum",
+        "description": "Endpoints para informações e estatísticas gerais do fórum."
+      },
+      {
+        "name": "Tópicos e Comentários",
+        "description": "Endpoints para criar, ler, atualizar e deletar tópicos e comentários do fórum."
+      },
+      {
+        "name": "Usuários",
+        "description": "Endpoints para consultar informações e status de usuários."
+      },
+      {
+        "name": "Categorias",
+        "description": "Endpoints para listar categorias e buscar tópicos por categoria."
+      },
+      {
+        "name": "Permissões",
+        "description": "Endpoints para verificar permissões de usuário para realizar ações."
+      },
+      {
+        "name": "Perfis",
+        "description": "Endpoints para gerenciamento de perfis de usuários."
+      },
+      {
+        "name": "Estatísticas",
+        "description": "Endpoints para obter estatísticas dos usuários."
+      },
+      {
+        "name": "Seguidores",
+        "description": "Endpoints para gerenciar o sistema de seguir usuários."
+      }
+    ],
+    "paths": {
+      "/register": {
+        "post": {
+          "tags": ["Autenticação"],
+          "summary": "Registra um novo usuário",
+          "description": "Cria um novo usuário e seu perfil no sistema.",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "username": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "password": {
+                      "type": "string",
+                      "format": "password"
+                    }
+                  },
+                  "required": ["username", "email", "password"]
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Usuário registrado com sucesso!"
+            },
+            "400": {
+              "description": "Dados de entrada inválidos."
+            },
+            "409": {
+              "description": "Email ou nome de usuário já em uso."
+            }
+          }
+        }
+      },
+      "/login": {
+        "post": {
+          "tags": ["Autenticação"],
+          "summary": "Autentica um usuário",
+          "description": "Realiza o login do usuário e retorna cookies de autenticação.",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "password": {
+                      "type": "string",
+                      "format": "password"
+                    },
+                    "keepLogged": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["email", "password"]
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Login realizado com sucesso!"
+            },
+            "401": {
+              "description": "Credenciais inválidas."
+            }
+          }
+        }
+      },
+      "/logout": {
+        "post": {
+          "tags": ["Autenticação"],
+          "summary": "Desconecta o usuário",
+          "description": "Realiza o logout do usuário e limpa os cookies de autenticação.",
+          "responses": {
+            "200": {
+              "description": "Logout realizado com sucesso!"
+            }
+          }
+        }
+      },
+      "/change-password": {
+        "put": {
+          "tags": ["Autenticação"],
+          "summary": "Altera a senha do usuário",
+          "description": "Altera a senha do usuário autenticado.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "newPassword": {
+                      "type": "string",
+                      "format": "password"
+                    }
+                  },
+                  "required": ["newPassword"]
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Senha atualizada com sucesso!"
+            },
+            "400": {
+              "description": "A nova senha não atende aos requisitos."
+            },
+            "401": {
+              "description": "Não autorizado."
+            }
+          }
+        }
+      },
+      "/forgot-password": {
+        "post": {
+          "tags": ["Autenticação"],
+          "summary": "Envia email de recuperação de senha",
+          "description": "Envia um email com o link para o usuário redefinir sua senha.",
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    }
+                  },
+                  "required": ["email"]
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Se uma conta com este e-mail existir, um link para redefinição de senha foi enviado."
+            }
+          }
+        }
+      },
+      "/session": {
+        "get": {
+          "tags": ["Autenticação"],
+          "summary": "Obtém a sessão do usuário",
+          "description": "Verifica a sessão ativa do usuário através dos cookies e retorna os data do usuário.",
+          "responses": {
+            "200": {
+              "description": "Sessão do usuário recuperada com sucesso."
+            },
+            "401": {
+              "description": "Nenhuma sessão ativa encontrada."
+            }
+          }
+        }
+      },
+      "/update-password": {
+        "patch": {
+          "tags": ["Autenticação"],
+          "summary": "Atualiza a senha do usuário",
+          "description": "Atualiza a senha do usuário autenticado.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "newPassword": {
+                      "type": "string",
+                      "format": "password"
+                    }
+                  },
+                  "required": ["newPassword"]
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Senha atualizada com sucesso!"
+            },
+            "400": {
+              "description": "A nova senha não atende aos requisitos."
+            },
+            "401": {
+              "description": "Não autorizado."
+            }
+          }
+        }
+      },
+      "/delete-account": {
+        "delete": {
+          "tags": ["Autenticação"],
+          "summary": "Deleta a conta do usuário",
+          "description": "Deleta permanentemente a conta do usuário autenticado.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "password": {
+                      "type": "string",
+                      "format": "password"
+                    }
+                  },
+                  "required": ["password"]
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Conta de usuário deletada com sucesso."
+            },
+            "401": {
+              "description": "Senha incorreta."
+            }
+          }
+        }
+      },
+      "/stats": {
+        "get": {
+          "tags": ["Fórum"],
+          "summary": "Obtém estatísticas gerais do fórum",
+          "description": "Retorna estatísticas gerais sobre o fórum, como número de membros, tópicos e total de posts.",
+          "responses": {
+            "200": {
+              "description": "Estatísticas retornadas com sucesso."
+            },
+            "500": {
+              "description": "Erro ao calcular as estatísticas do fórum."
+            }
+          }
+        }
+      },
+      "/posts/recent": {
+        "get": {
+          "tags": ["Fórum"],
+          "summary": "Busca os posts mais recentes",
+          "description": "Retorna uma lista das publicações mais recentes do fórum, incluindo tópicos e comentários.",
+          "responses": {
+            "200": {
+              "description": "Publicações recentes retornadas com sucesso."
+            },
+            "500": {
+              "description": "Erro ao buscar as publicações recentes."
+            }
+          }
+        }
+      },
+      "/topics": {
+        "post": {
+          "tags": ["Tópicos e Comentários"],
+          "summary": "Cria um novo tópico",
+          "description": "Cria um novo tópico no fórum. Requer autenticação e pode incluir upload de arquivos.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "multipart/form-data": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "description": "O título do tópico (mínimo 5 caracteres)."
+                    },
+                    "content": {
+                      "type": "string",
+                      "description": "O conteúdo do tópico (mínimo 10 caracteres)."
+                    },
+                    "category": {
+                      "type": "string",
+                      "description": "A categoria do tópico."
+                    },
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "binary"
+                      },
+                      "description": "Até 5 imagens para o tópico."
+                    }
+                  },
+                  "required": ["title", "content", "category"]
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Tópico criado com sucesso."
+            },
+            "400": {
+              "description": "Dados inválidos."
+            },
+            "401": {
+              "description": "Usuário não autenticado."
+            },
+            "403": {
+              "description": "Usuário não tem permissão para criar tópicos nesta categoria."
+            }
+          }
+        }
+      },
+      "/topics/check-permission": {
+        "post": {
+          "tags": ["Permissões"],
+          "summary": "Verifica permissão para criar tópico",
+          "description": "Verifica se o usuário autenticado tem permissão para criar um tópico em uma determinada categoria.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "category": {
+                      "type": "string",
+                      "description": "O slug da categoria onde se deseja criar o tópico."
+                    }
+                  },
+                  "required": ["category"]
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Permissão verificada.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "allowed": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "A categoria é obrigatória."
+            },
+            "401": {
+              "description": "Usuário não autenticado."
+            }
+          }
+        }
+      },
+      "/topics/{id}": {
+        "get": {
+          "tags": ["Tópicos e Comentários"],
+          "summary": "Busca um tópico pelo ID",
+          "description": "Retorna um tópico e seus comentários paginados.",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              },
+              "description": "ID do tópico"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "default": 1
+              },
+              "description": "Número da página de comentários."
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "default": 10
+              },
+              "description": "Número de comentários por página."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Tópico retornado com sucesso."
+            },
+            "400": {
+              "description": "ID de tópico inválido."
+            },
+            "404": {
+              "description": "Tópico não encontrado."
+            }
+          }
+        },
+        "patch": {
+          "tags": ["Tópicos e Comentários"],
+          "summary": "Atualiza um tópico",
+          "description": "Atualiza o título e/ou conteúdo de um tópico. Requer autenticação e que o usuário seja o autor do tópico.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              },
+              "description": "ID do tópico a ser atualizado."
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "content": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Tópico atualizado com sucesso."
+            },
+            "400": {
+              "description": "ID de tópico inválido."
+            },
+            "401": {
+              "description": "Usuário não autenticado."
+            },
+            "403": {
+              "description": "Usuário não autorizado a editar este tópico."
+            }
+          }
+        },
+        "delete": {
+          "tags": ["Tópicos e Comentários"],
+          "summary": "Deleta um tópico",
+          "description": "Deleta um tópico. Requer autenticação e que o usuário seja o autor do tópico.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              },
+              "description": "ID do tópico a ser deletado."
+            }
+          ],
+          "responses": {
+            "204": {
+              "description": "Tópico deletado com sucesso."
+            },
+            "400": {
+              "description": "ID de tópico inválido."
+            },
+            "401": {
+              "description": "Usuário não autenticado."
+            },
+            "403": {
+              "description": "Usuário não autorizado a deletar este tópico."
+            }
+          }
+        }
+      },
+      "/topics/slug/{slug}": {
+        "get": {
+          "tags": ["Tópicos e Comentários"],
+          "summary": "Busca um tópico pelo slug",
+          "description": "Retorna um tópico e seus comentários paginados através do seu slug.",
+          "parameters": [
+            {
+              "name": "slug",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              },
+              "description": "Slug do tópico"
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "default": 1
+              },
+              "description": "Número da página de comentários."
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "default": 10
+              },
+              "description": "Número de comentários por página."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Tópico retornado com sucesso."
+            },
+            "400": {
+              "description": "Slug é obrigatório."
+            },
+            "404": {
+              "description": "Tópico não encontrado."
+            }
+          }
+        }
+      },
+      "/topics/category/{category}": {
+        "get": {
+          "tags": ["Categorias"],
+          "summary": "Busca tópicos por categoria",
+          "description": "Retorna uma lista paginada de tópicos pertencentes a uma categoria específica.",
+          "parameters": [
+            {
+              "name": "category",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              },
+              "description": "O slug da categoria."
+            },
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "default": 1
+              },
+              "description": "Número da página de tópicos."
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "default": 10
+              },
+              "description": "Número de tópicos por página."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Tópicos da categoria retornados com sucesso."
+            },
+            "400": {
+              "description": "A categoria é obrigatória."
+            },
+            "404": {
+              "description": "Não há mais tópicos para mostrar."
+            }
+          }
+        }
+      },
+      "/topics/{topicId}/comments": {
+        "post": {
+          "tags": ["Tópicos e Comentários"],
+          "summary": "Cria um novo comentário",
+          "description": "Adiciona um novo comentário a um tópico. Requer autenticação e pode incluir upload de arquivos.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "topicId",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              },
+              "description": "ID do tópico onde o comentário será postado."
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "multipart/form-data": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "content": {
+                      "type": "string",
+                      "description": "O conteúdo do comentário (mínimo 1 caracter)."
+                    },
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "binary"
+                      },
+                      "description": "Até 5 imagens para o comentário."
+                    }
+                  },
+                  "required": ["content"]
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Comentário criado com sucesso."
+            },
+            "400": {
+              "description": "ID de tópico ou data do comentário inválidos."
+            },
+            "401": {
+              "description": "Usuário não autenticado."
+            },
+            "403": {
+              "description": "Usuário não tem permissão para comentar neste tópico."
+            }
+          }
+        }
+      },
+      "/comments/{topicId}/check-permission": {
+        "get": {
+          "tags": ["Permissões"],
+          "summary": "Verifica permissão para criar comentário",
+          "description": "Verifica se o usuário autenticado tem permissão para criar um comentário em um determinado tópico.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "topicId",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              },
+              "description": "O ID do tópico que se deseja comentar."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Permissão verificada.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "allowed": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "O ID do tópico é inválido."
+            },
+            "401": {
+              "description": "Usuário não autenticado."
+            }
+          }
+        }
+      },
+      "/comments/{id}": {
+        "delete": {
+          "tags": ["Tópicos e Comentários"],
+          "summary": "Deleta um comentário",
+          "description": "Deleta um comentário. Requer autenticação e que o usuário seja o autor do comentário.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              },
+              "description": "ID do comentário a ser deletado."
+            }
+          ],
+          "responses": {
+            "204": {
+              "description": "Comentário deletado com sucesso."
+            },
+            "400": {
+              "description": "ID de comentário inválido."
+            },
+            "401": {
+              "description": "Usuário não autenticado."
+            },
+            "403": {
+              "description": "Usuário não autorizado a deletar este comentário."
+            }
+          }
+        }
+      },
+      "/comments/{commentId}": {
+        "patch": {
+          "tags": ["Tópicos e Comentários"],
+          "summary": "Atualiza um comentário",
+          "description": "Atualiza o conteúdo de um comentário. Requer autenticação e que o usuário seja o autor do comentário.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "commentId",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              },
+              "description": "ID do comentário a ser atualizado."
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "content": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["content"]
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Comentário atualizado com sucesso."
+            },
+            "400": {
+              "description": "ID de comentário inválido ou conteúdo faltando."
+            },
+            "401": {
+              "description": "Usuário não autenticado."
+            },
+            "403": {
+              "description": "Usuário não autorizado a editar este comentário."
+            }
+          }
+        }
+      },
+      "/last-registration": {
+        "get": {
+          "tags": ["Usuários"],
+          "summary": "Busca o último usuário registrado",
+          "description": "Retorna o nome de usuário e a role do último usuário que se cadastrou no fórum.",
+          "responses": {
+            "200": {
+              "description": "Último usuário registrado retornado com sucesso."
+            },
+            "404": {
+              "description": "Nenhum usuário registrado foi encontrado."
+            }
+          }
+        }
+      },
+      "/ping": {
+        "post": {
+          "tags": ["Usuários"],
+          "summary": "Atualiza o status online do usuário",
+          "description": "Recebe um 'ping' do usuário autenticado para atualizar seu status de 'visto por último', mantendo-o na lista de usuários online.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Status atualizado com sucesso."
+            },
+            "401": {
+              "description": "Usuário não autenticado."
+            }
+          }
+        }
+      },
+      "/online": {
+        "get": {
+          "tags": ["Usuários"],
+          "summary": "Lista os usuários online",
+          "description": "Retorna uma lista de usuários que estiveram ativos nos últimos 2 minutos.",
+          "responses": {
+            "200": {
+              "description": "Lista de usuários online retornada com sucesso."
+            }
+          }
+        }
+      },
+      "/user/all": {
+        "get": {
+          "tags": ["Usuários"],
+          "summary": "Lista todos os usuários",
+          "description": "Retorna uma lista paginada de todos os usuários registrados no fórum.",
+          "parameters": [
+            {
+              "name": "page",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "default": 1
+              },
+              "description": "Número da página."
+            },
+            {
+              "name": "limit",
+              "in": "query",
+              "schema": {
+                "type": "integer",
+                "default": 20
+              },
+              "description": "Número de usuários por página."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Lista de usuários retornada com sucesso."
+            },
+            "404": {
+              "description": "Não há mais usuários para mostrar."
+            }
+          }
+        }
+      },
+      "/": {
+        "get": {
+          "tags": ["Categorias"],
+          "summary": "Lista todas as categorias",
+          "description": "Retorna uma lista com o nome e o slug de todas as categorias do fórum.",
+          "responses": {
+            "200": {
+              "description": "Categorias retornadas com sucesso."
+            }
+          }
+        }
+      },
+      "/{id}": {
+        "get": {
+          "tags": ["Perfis"],
+          "summary": "Busca um perfil pelo ID do usuário",
+          "description": "Retorna as informações públicas de um perfil de usuário com base no ID do usuário.",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": "O ID do usuário."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Perfil retornado com sucesso."
+            },
+            "404": {
+              "description": "O perfil com este ID não foi encontrado."
+            }
+          }
+        }
+      },
+      "/update": {
+        "put": {
+          "tags": ["Perfis"],
+          "summary": "Atualiza o perfil do usuário autenticado",
+          "description": "Permite que o usuário autenticado atualize suas próprias informações de perfil.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "username": { "type": "string" },
+                    "website": { "type": "string" },
+                    "gender": { "type": "string" },
+                    "birthdate": { "type": "string", "format": "date" },
+                    "location": { "type": "string" },
+                    "facebook": { "type": "string" },
+                    "instagram": { "type": "string" },
+                    "discord": { "type": "string" },
+                    "steam": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Perfil atualizado com sucesso!"
+            },
+            "400": {
+              "description": "Nenhum campo válido para atualização foi fornecido."
+            },
+            "401": {
+              "description": "Usuário não autenticado."
+            },
+            "409": {
+              "description": "Este nome de usuário já está em uso."
+            }
+          }
+        }
+      },
+      "/user/{username}": {
+        "get": {
+          "tags": ["Perfis"],
+          "summary": "Busca um perfil pelo nome de usuário",
+          "description": "Retorna as informações públicas de um perfil com base no nome de usuário.",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              },
+              "description": "O nome de usuário."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Perfil retornado com sucesso."
+            },
+            "404": {
+              "description": "Usuário com este nome não foi encontrado."
+            }
+          }
+        }
+      },
+      "/user/avatar": {
+        "patch": {
+          "tags": ["Perfis"],
+          "summary": "Atualiza o avatar do usuário",
+          "description": "Permite que o usuário autenticado envie um novo arquivo de imagem para usar como seu avatar.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "multipart/form-data": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "avatar": {
+                      "type": "string",
+                      "format": "binary",
+                      "description": "O arquivo de imagem do avatar."
+                    }
+                  },
+                  "required": ["avatar"]
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Avatar atualizado com sucesso!"
+            },
+            "400": {
+              "description": "Nenhum arquivo enviado."
+            },
+            "401": {
+              "description": "Usuário não autenticado."
+            }
+          }
+        },
+        "delete": {
+          "tags": ["Perfis"],
+          "summary": "Remove o avatar do usuário",
+          "description": "Permite que o usuário autenticado remova seu avatar atual.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Avatar removido com sucesso!"
+            },
+            "401": {
+              "description": "Usuário não autenticado."
+            }
+          }
+        }
+      },
+      "/profile/{username}/stats": {
+        "get": {
+          "tags": ["Estatísticas"],
+          "summary": "Obtém estatísticas de um usuário",
+          "description": "Retorna um compilado de estatísticas de atividade de um usuário específico no fórum.",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              },
+              "description": "O nome de usuário para buscar as estatísticas."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Estatísticas do usuário retornadas com sucesso."
+            },
+            "404": {
+              "description": "Perfil não encontrado."
+            }
+          }
+        }
+      },
+      "/profile/{username}/topics": {
+        "get": {
+          "tags": ["Estatísticas"],
+          "summary": "Lista os tópicos criados por um usuário",
+          "description": "Retorna uma lista de todos os tópicos que um usuário específico criou.",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              },
+              "description": "O nome de usuário para buscar os tópicos."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Tópicos do usuário retornados com sucesso."
+            },
+            "404": {
+              "description": "Usuário não encontrado."
+            }
+          }
+        }
+      },
+      "/{username}/follow": {
+        "post": {
+          "tags": ["Seguidores (Follow)"],
+          "summary": "Seguir um usuário",
+          "description": "Permite que o usuário autenticado siga outro usuário.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              },
+              "description": "O nome do usuário a ser seguido."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Usuário seguido com sucesso!"
+            },
+            "400": {
+              "description": "Você não pode seguir a si mesmo."
+            },
+            "401": {
+              "description": "Usuário não autenticado."
+            },
+            "404": {
+              "description": "Usuário a ser seguido não encontrado."
+            },
+            "409": {
+              "description": "Você já está seguindo este usuário."
+            }
+          }
+        },
+        "delete": {
+          "tags": ["Seguidores (Follow)"],
+          "summary": "Deixar de seguir um usuário",
+          "description": "Permite que o usuário autenticado deixe de seguir outro usuário.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              },
+              "description": "O nome do usuário para deixar de seguir."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Você deixou de seguir o usuário."
+            },
+            "400": {
+              "description": "Você não pode deixar de seguir a si mesmo."
+            },
+            "401": {
+              "description": "Usuário não autenticado."
+            },
+            "404": {
+              "description": "Usuário para deixar de seguir não encontrado."
+            }
+          }
+        }
+      },
+      "/{username}/stats": {
+        "get": {
+          "tags": ["Seguidores (Follow)"],
+          "summary": "Obtém estatísticas de seguidores",
+          "description": "Retorna o número de seguidores e o número de usuários que um perfil está seguindo.",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              },
+              "description": "O nome do usuário para buscar as estatísticas."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Estatísticas retornadas com sucesso."
+            },
+            "404": {
+              "description": "Usuário não encontrado."
+            }
+          }
+        }
+      },
+      "/{username}/followers": {
+        "get": {
+          "tags": ["Seguidores (Follow)"],
+          "summary": "Lista os seguidores de um usuário",
+          "description": "Retorna a lista de usuários que seguem o perfil especificado.",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              },
+              "description": "O nome do usuário para listar os seguidores."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Lista de seguidores retornada com sucesso."
+            },
+            "404": {
+              "description": "Usuário não encontrado."
+            }
+          }
+        }
+      },
+      "/{username}/following": {
+        "get": {
+          "tags": ["Seguidores (Follow)"],
+          "summary": "Lista quem um usuário segue",
+          "description": "Retorna a lista de usuários que o perfil especificado está seguindo.",
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              },
+              "description": "O nome do usuário."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Lista retornada com sucesso."
+            },
+            "404": {
+              "description": "Usuário não encontrado."
+            }
+          }
+        }
+      },
+      "/{username}/is-following": {
+        "get": {
+          "tags": ["Seguidores (Follow)"],
+          "summary": "Verifica se está seguindo",
+          "description": "Verifica se o usuário autenticado está seguindo o usuário especificado.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              },
+              "description": "O nome do usuário para verificar."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Status retornado com sucesso.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "isFollowing": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Usuário não autenticado."
+            },
+            "404": {
+              "description": "Usuário não encontrado."
+            }
+          }
+        }
+      },
+      "/followers/{username}": {
+        "delete": {
+          "tags": ["Seguidores (Follow)"],
+          "summary": "Remover um seguidor",
+          "description": "Permite que o usuário autenticado remova um de seus próprios seguidores.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "username",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string"
+              },
+              "description": "O nome do seguidor a ser removido."
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Seguidor removido com sucesso!"
+            },
+            "400": {
+              "description": "Ação inválida."
+            },
+            "401": {
+              "description": "Usuário não autenticado."
+            },
+            "404": {
+              "description": "Seguidor não encontrado ou não está te seguindo."
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "securitySchemes": {
+        "bearerAuth": {
+          "type": "http",
+          "scheme": "bearer",
+          "bearerFormat": "JWT"
+        }
+      }
+    }
+  }
