@@ -1,0 +1,1936 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API do Fórum",
+    "version": "1.0.0",
+    "description": "Documentação da API para o projeto de fórum."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Servidor de Desenvolvimento"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Autenticação",
+      "description": "Endpoints para gerenciamento de usuários, sessões e autenticação."
+    },
+    {
+      "name": "Usuários",
+      "description": "Endpoints para consultar informações e status de usuários."
+    },
+    {
+      "name": "Perfis",
+      "description": "Endpoints para gerenciamento de perfis de usuários."
+    },
+    {
+      "name": "Seguidores",
+      "description": "Endpoints para gerenciar o sistema de seguir usuários."
+    },
+    {
+      "name": "Estatísticas",
+      "description": "Endpoints para obter estatísticas dos usuários."
+    },
+    {
+      "name": "Categorias",
+      "description": "Endpoints para listar categorias e buscar tópicos por categoria."
+    },
+    {
+      "name": "Tópicos e Comentários",
+      "description": "Endpoints para criar, ler, atualizar e deletar tópicos e comentários do fórum."
+    },
+    {
+      "name": "Permissões",
+      "description": "Endpoints para verificar permissões de usuário para realizar ações."
+    },
+    {
+      "name": "Fórum",
+      "description": "Endpoints para informações e estatísticas gerais do fórum."
+    }
+  ],
+  "paths": {
+    "/register": {
+      "post": {
+        "tags": ["Autenticação"],
+        "summary": "Registra um novo usuário",
+        "description": "Cria uma nova conta de usuário e um perfil associado. Um e-mail de confirmação será enviado para o endereço fornecido.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "example": "usuario"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "usuario@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "S3cur#"
+                  }
+                },
+                "required": ["username", "email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuário criado com sucesso. Um e-mail de verificação foi enviado."
+          },
+          "400": {
+            "description": "Requisição inválida. Os dados fornecidos são inválidos, como um e-mail mal formatado ou uma senha que não atende aos critérios de segurança."
+          },
+          "409": {
+            "description": "Conflito. O e-mail ou nome de usuário(a) fornecidos já está em uso por outra conta."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/login": {
+      "post": {
+        "tags": ["Autenticação"],
+        "summary": "Autentica um usuário",
+        "description": "Realiza o login do usuário e retorna cookies de autenticação.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password"
+                  },
+                  "keepLogged": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login bem-sucedido. Os tokens são definidos em cookies `Set-Cookie` na resposta."
+          },
+          "401": {
+            "description": "Não autorizado. Email ou senha inválidos."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/logout": {
+      "post": {
+        "tags": ["Autenticação"],
+        "summary": "Desconecta o usuário",
+        "description": "Realiza o logout do usuário e limpa os cookies de autenticação.",
+        "responses": {
+          "200": {
+            "description": "Logout realizado com sucesso!"
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/change-password": {
+      "put": {
+        "tags": ["Autenticação"],
+        "summary": "Altera a senha do usuário",
+        "description": "Altera a senha do usuário autenticado.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "newPassword": {
+                    "type": "string",
+                    "format": "password"
+                  }
+                },
+                "required": ["newPassword"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Senha atualizada com sucesso!"
+          },
+          "400": {
+            "description": "A nova senha não atende aos requisitos."
+          },
+          "401": {
+            "description": "Não autorizado ou token de autenticação não fornecido"
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/forgot-password": {
+      "post": {
+        "tags": ["Autenticação"],
+        "summary": "Envia email de recuperação de senha",
+        "description": "Envia um email com o link para o usuário redefinir sua senha.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                },
+                "required": ["email"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Se uma conta com este e-mail existir, um link para redefinição de senha foi enviado."
+          },
+          "400": {
+            "description": "O e-mail é obrigatório"
+          },
+          "429": {
+            "description": "Você realizou muitas tentativas, tente novamente em alguns minutos"
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/session": {
+      "get": {
+        "tags": ["Autenticação"],
+        "summary": "Obtém a sessão do usuário",
+        "description": "Verifica a sessão ativa do usuário através dos cookies e retorna os data do usuário.",
+        "responses": {
+          "200": {
+            "description": "Sessão do usuário recuperada com sucesso."
+          },
+          "401": {
+            "description": "Sua sessão expirou. Faça o login novamente"
+          },
+          "404": {
+            "description": "Não foi possível carregar os dados do perfil associado"
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/update-password": {
+      "patch": {
+        "tags": ["Autenticação"],
+        "summary": "Atualiza a senha do usuário",
+        "description": "Atualiza a senha do usuário autenticado.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "newPassword": {
+                    "type": "string",
+                    "format": "password"
+                  }
+                },
+                "required": ["newPassword"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Senha atualizada com sucesso!"
+          },
+          "400": {
+            "description": "A nova senha não atende aos requisitos."
+          },
+          "401": {
+            "description": "Não autorizado ou usuário não autenticado"
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/delete-account": {
+      "delete": {
+        "tags": ["Autenticação"],
+        "summary": "Deleta a conta do usuário",
+        "description": "Deleta permanentemente a conta do usuário autenticado.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "format": "password"
+                  }
+                },
+                "required": ["password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conta de usuário deletada com sucesso."
+          },
+          "400": {
+            "description": "A senha é obrigatória para realizar essa ação"
+          },
+          "401": {
+            "description": "Senha incorreta."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/last-registration": {
+      "get": {
+        "tags": ["Usuários"],
+        "summary": "Busca o último usuário registrado",
+        "description": "Retorna o nome de usuário e a role do último usuário que se cadastrou no fórum.",
+        "responses": {
+          "200": {
+            "description": "Último usuário registrado retornado com sucesso.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "username": "joaosilva",
+                  "role": "membro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nenhum usuário registrado foi encontrado."
+          },
+          "500": {
+            "description": "Ocorreu um erro no banco de dados ao buscar o usuário"
+          }
+        }
+      }
+    },
+    "/ping": {
+      "post": {
+        "tags": ["Usuários"],
+        "summary": "Atualiza o status online do usuário",
+        "description": "Recebe um 'ping' do usuário autenticado para atualizar seu status de 'visto por último', mantendo-o na lista de usuários online.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status atualizado com sucesso."
+          },
+          "401": {
+            "description": "Usuário não autenticado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/online": {
+      "get": {
+        "tags": ["Usuários"],
+        "summary": "Lista os usuários online",
+        "description": "Retorna uma lista de usuários que estiveram ativos nos últimos 2 minutos.",
+        "responses": {
+          "200": {
+            "description": "Lista de usuários online retornada com sucesso.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "username": "joaosilva",
+                  "role": "membro"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Ocorreu um erro no servidor ao contar os usuários online."
+          }
+        }
+      }
+    },
+    "/user/all": {
+      "get": {
+        "tags": ["Usuários"],
+        "summary": "Lista todos os usuários",
+        "description": "Retorna uma lista paginada de todos os usuários registrados no fórum.",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Número da página."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "Número de usuários por página."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de usuários retornada com sucesso.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "page": 1,
+                  "limit": 20,
+                  "totalCount": 2,
+                  "users": [
+                    {
+                      "username": "joaosilva",
+                      "role": "membro",
+                      "joined_at": "2025-01-12T14:30:00Z",
+                      "last_login": "2025-09-22T18:40:00Z",
+                      "avatar_url": "https://example.com/avatars/joaosilva.png",
+                      "mensagens_count": 134
+                    },
+                    {
+                      "username": "maria123",
+                      "role": "developer",
+                      "joined_at": "2024-12-01T09:15:00Z",
+                      "last_login": "2025-09-22T18:50:00Z",
+                      "avatar_url": "https://example.com/avatars/maria123.png",
+                      "mensagens_count": 289
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Não há mais usuários para mostrar."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/{id}": {
+      "get": {
+        "tags": ["Perfis"],
+        "summary": "Busca um perfil pelo ID do usuário",
+        "description": "Retorna as informações públicas de um perfil de usuário com base no ID do usuário.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "O ID do usuário."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Perfil retornado com sucesso.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "avatar_url": "https://example.com/avatars/joaosilva.png",
+                  "username": "joaosilva",
+                  "gender": "male",
+                  "birthdate": "1998-07-15",
+                  "location": "São Paulo, Brasil",
+                  "joined_at": "2024-12-01T09:15:00Z",
+                  "last_login": "2025-09-22T18:55:00Z",
+                  "role": "membro",
+                  "website": "https://joaosilva.dev",
+                  "facebook": "https://facebook.com/joaosilva",
+                  "instagram": "https://instagram.com/joaosilva",
+                  "discord": "joaosilva#1234",
+                  "steam": "https://steamcommunity.com/id/joaosilva",
+                  "mensagens_count": 245
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "O perfil com este ID não foi encontrado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/update": {
+      "put": {
+        "tags": ["Perfis"],
+        "summary": "Atualiza o perfil do usuário autenticado",
+        "description": "Permite que o usuário autenticado atualize suas próprias informações de perfil.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "website": {
+                    "type": "string"
+                  },
+                  "gender": {
+                    "type": "string"
+                  },
+                  "birthdate": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "location": {
+                    "type": "string"
+                  },
+                  "facebook": {
+                    "type": "string"
+                  },
+                  "instagram": {
+                    "type": "string"
+                  },
+                  "discord": {
+                    "type": "string"
+                  },
+                  "steam": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Perfil atualizado com sucesso!"
+          },
+          "400": {
+            "description": "Nenhum campo válido para atualização foi fornecido."
+          },
+          "401": {
+            "description": "Usuário não autenticado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/update-data": {
+      "patch": {
+        "tags": ["Perfis"],
+        "summary": "Atualiza nome de usuário e e-mail",
+        "description": "Permite que o usuário autenticado atualize seu nome de usuário e seu endereço de e-mail. Se o e-mail for alterado, um novo e-mail de confirmação será enviado.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "example": "novo_usuario"
+                  },
+                  "newEmail": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "novo.email@example.com"
+                  }
+                },
+                "required": ["username", "newEmail"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Perfil atualizado com sucesso. A mensagem pode variar se o e-mail for alterado."
+          },
+          "400": {
+            "description": "Dados da requisição ausentes."
+          },
+          "401": {
+            "description": "Não autorizado. Token de autenticação inválido ou não fornecido."
+          },
+          "409": {
+            "description": "Conflito, o nome de usuário ou e-mail já estão em uso."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/user/{username}": {
+      "get": {
+        "tags": ["Perfis"],
+        "summary": "Busca um perfil pelo nome de usuário",
+        "description": "Retorna as informações públicas de um perfil com base no nome de usuário.",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "O nome de usuário."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Perfil retornado com sucesso.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "username": "maria123",
+                  "gender": "female",
+                  "birthdate": "2000-03-22",
+                  "location": "Rio de Janeiro, Brasil",
+                  "website": "https://maria.dev",
+                  "joined_at": "2024-11-05T13:00:00Z",
+                  "last_login": "2025-09-22T19:10:00Z",
+                  "role": "developer",
+                  "facebook": "https://facebook.com/maria123",
+                  "instagram": "https://instagram.com/maria.dev",
+                  "discord": "maria#5678",
+                  "steam": "https://steamcommunity.com/id/maria123",
+                  "avatar_url": "https://example.com/avatars/maria123.png",
+                  "followers_count": 512,
+                  "following_count": 134
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Usuário com este nome não foi encontrado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/user/avatar": {
+      "patch": {
+        "tags": ["Perfis"],
+        "summary": "Atualiza o avatar do usuário",
+        "description": "Permite que o usuário autenticado envie um novo arquivo de imagem para usar como seu avatar.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "O arquivo de imagem do avatar."
+                  }
+                },
+                "required": ["avatar"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Avatar atualizado com sucesso!"
+          },
+          "400": {
+            "description": "Nenhum arquivo enviado."
+          },
+          "401": {
+            "description": "Usuário não autenticado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Perfis"],
+        "summary": "Remove o avatar do usuário",
+        "description": "Permite que o usuário autenticado remova seu avatar atual.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Avatar removido com sucesso!"
+          },
+          "401": {
+            "description": "Usuário não autenticado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/{username}/follow": {
+      "post": {
+        "tags": ["Seguidores"],
+        "summary": "Seguir um usuário",
+        "description": "Permite que o usuário autenticado siga outro usuário.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "O nome do usuário a ser seguido."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usuário seguido com sucesso!"
+          },
+          "400": {
+            "description": "Você não pode seguir a si mesmo."
+          },
+          "401": {
+            "description": "Usuário não autenticado."
+          },
+          "404": {
+            "description": "Usuário a ser seguido não encontrado."
+          },
+          "409": {
+            "description": "Você já está seguindo este usuário."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Seguidores"],
+        "summary": "Deixar de seguir um usuário",
+        "description": "Permite que o usuário autenticado deixe de seguir outro usuário.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "O nome do usuário para deixar de seguir."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Você deixou de seguir o usuário."
+          },
+          "400": {
+            "description": "Você não pode deixar de seguir a si mesmo."
+          },
+          "401": {
+            "description": "Usuário não autenticado."
+          },
+          "404": {
+            "description": "Usuário para deixar de seguir não encontrado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/{username}/stats": {
+      "get": {
+        "tags": ["Seguidores"],
+        "summary": "Obtém estatísticas de seguidores",
+        "description": "Retorna o número de seguidores e o número de usuários que um perfil está seguindo.",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "O nome do usuário para buscar as estatísticas."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estatísticas retornadas com sucesso.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "username": "maria123",
+                  "followers_count": 512,
+                  "following_count": 134
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Usuário não encontrado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/{username}/followers": {
+      "get": {
+        "tags": ["Seguidores"],
+        "summary": "Lista os seguidores de um usuário",
+        "description": "Retorna a lista de usuários que seguem o perfil especificado.",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "O nome do usuário para listar os seguidores."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de seguidores retornada com sucesso.",
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "username": "joaosilva",
+                    "avatar_url": "https://example.com/avatars/joaosilva.png"
+                  },
+                  {
+                    "username": "ana_dev",
+                    "avatar_url": "https://example.com/avatars/ana_dev.png"
+                  },
+                  {
+                    "username": "carlos123",
+                    "avatar_url": "https://example.com/avatars/carlos123.png"
+                  }
+                ]
+              }
+            }
+          },
+          "404": {
+            "description": "Usuário não encontrado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/{username}/following": {
+      "get": {
+        "tags": ["Seguidores"],
+        "summary": "Lista quem um usuário segue",
+        "description": "Retorna a lista de usuários que o perfil especificado está seguindo.",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "O nome do usuário."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista retornada com sucesso.",
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "username": "lucas_dev",
+                    "avatar_url": "https://example.com/avatars/lucas_dev.png"
+                  },
+                  {
+                    "username": "bianca99",
+                    "avatar_url": "https://example.com/avatars/bianca99.png"
+                  },
+                  {
+                    "username": "rafael_silva",
+                    "avatar_url": "https://example.com/avatars/rafael_silva.png"
+                  }
+                ]
+              }
+            }
+          },
+          "404": {
+            "description": "Usuário não encontrado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/{username}/is-following": {
+      "get": {
+        "tags": ["Seguidores"],
+        "summary": "Verifica se está seguindo",
+        "description": "Verifica se o usuário autenticado está seguindo o usuário especificado.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "O nome do usuário para verificar."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status retornado com sucesso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "isFollowing": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Usuário não autenticado."
+          },
+          "404": {
+            "description": "Usuário não encontrado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/followers/{username}": {
+      "delete": {
+        "tags": ["Seguidores"],
+        "summary": "Remover um seguidor",
+        "description": "Permite que o usuário autenticado remova um de seus próprios seguidores.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "O nome do seguidor a ser removido."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Seguidor removido com sucesso!"
+          },
+          "400": {
+            "description": "Ação inválida."
+          },
+          "401": {
+            "description": "Usuário não autenticado."
+          },
+          "404": {
+            "description": "Seguidor não encontrado ou não está te seguindo."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/profile/{username}/stats": {
+      "get": {
+        "tags": ["Estatísticas"],
+        "summary": "Obtém estatísticas de um usuário",
+        "description": "Retorna um compilado de estatísticas de atividade de um usuário específico no fórum.",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "O nome de usuário para buscar as estatísticas."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estatísticas do usuário retornadas com sucesso.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "topicsCount": 42,
+                  "topicsPerDay": "0.25",
+                  "topicsPercentage": "3.50",
+                  "lastTopicDate": "2025-09-15T14:20:00Z",
+                  "messagesCount": 187,
+                  "messagesPerDay": "1.12",
+                  "messagesPercentage": "4.80",
+                  "lastPostDate": "2025-09-18T19:40:00Z",
+                  "followersCount": 56,
+                  "memberSince": "2023-07-10T12:00:00Z",
+                  "lastLogin": "2025-09-22T19:30:00Z"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Perfil não encontrado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/profile/{username}/topics": {
+      "get": {
+        "tags": ["Estatísticas"],
+        "summary": "Lista os tópicos criados por um usuário",
+        "description": "Retorna uma lista de todos os tópicos que um usuário específico criou.",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "O nome de usuário para buscar os tópicos."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tópicos do usuário retornados com sucesso.",
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "title": "Como configurar Supabase com Next.js",
+                    "slug": "configurar-supabase-nextjs",
+                    "category": "Desenvolvimento",
+                    "created_in": "2025-09-20T15:30:00Z",
+                    "profiles": {
+                      "username": "joaosilva",
+                      "avatar_url": "https://example.com/avatars/joaosilva.png"
+                    },
+                    "comentarios": {
+                      "count": 5
+                    }
+                  },
+                  {
+                    "title": "Dicas para organizar fóruns online",
+                    "slug": "dicas-organizar-foruns",
+                    "category": "Comunidade",
+                    "created_in": "2025-08-18T10:20:00Z",
+                    "profiles": {
+                      "username": "joaosilva",
+                      "avatar_url": "https://example.com/avatars/joaosilva.png"
+                    },
+                    "comentarios": {
+                      "count": 8
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "404": {
+            "description": "Usuário não encontrado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": ["Categorias"],
+        "summary": "Lista todas as categorias",
+        "description": "Retorna uma lista com o nome e o slug de todas as categorias do fórum.",
+        "responses": {
+          "200": {
+            "description": "Categorias retornadas com sucesso.",
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "slug": "development",
+                    "name": "Desenvolvimento"
+                  },
+                  {
+                    "slug": "community",
+                    "name": "Comunidade"
+                  },
+                  {
+                    "slug": "news",
+                    "name": "Notícias"
+                  }
+                ]
+              }
+            }
+          },
+          "500": {
+            "description": "Erro ao buscar as categorias no banco de dados."
+          }
+        }
+      }
+    },
+    "/topics/category/{category}": {
+      "get": {
+        "tags": ["Categorias"],
+        "summary": "Busca tópicos por categoria",
+        "description": "Retorna uma lista paginada de tópicos pertencentes a uma categoria específica.",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "O slug da categoria."
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Número da página de tópicos."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Número de tópicos por página."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tópicos da categoria retornados com sucesso.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "totalCount": 25,
+                  "data": [
+                    {
+                      "title": "Introdução ao Next.js",
+                      "slug": "introducao-nextjs",
+                      "created_in": "2025-09-18T10:15:00Z",
+                      "profiles": {
+                        "username": "joaosilva",
+                        "avatar_url": "https://example.com/avatars/joaosilva.png"
+                      },
+                      "comentarios": {
+                        "count": 5
+                      }
+                    },
+                    {
+                      "title": "Como organizar fóruns online",
+                      "slug": "organizar-foruns-online",
+                      "created_in": "2025-08-22T14:30:00Z",
+                      "profiles": {
+                        "username": "ana_dev",
+                        "avatar_url": "https://example.com/avatars/ana_dev.png"
+                      },
+                      "comentarios": {
+                        "count": 8
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A categoria é obrigatória."
+          },
+          "404": {
+            "description": "Não há mais tópicos para mostrar."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/topics": {
+      "post": {
+        "tags": ["Tópicos e Comentários"],
+        "summary": "Cria um novo tópico",
+        "description": "Cria um novo tópico no fórum. Requer autenticação e pode incluir upload de arquivos.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "O título do tópico (mínimo 5 caracteres)."
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "O conteúdo do tópico (mínimo 10 caracteres)."
+                  },
+                  "category": {
+                    "type": "string",
+                    "description": "A categoria do tópico."
+                  },
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "description": "Até 5 imagens para o tópico."
+                  }
+                },
+                "required": ["title", "content", "category"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tópico criado com sucesso."
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Usuário não autenticado."
+          },
+          "403": {
+            "description": "Usuário não tem permissão para criar tópicos nesta categoria."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/topics/{id}": {
+      "get": {
+        "tags": ["Tópicos e Comentários"],
+        "summary": "Busca um tópico pelo ID",
+        "description": "Retorna um tópico e seus comentários paginados.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "ID do tópico"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Número da página de comentários."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Número de comentários por página."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tópico retornado com sucesso.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "id": 12,
+                    "title": "Exemplo de Tópico",
+                    "content": "Este é o conteúdo do tópico.",
+                    "slug": "exemplo-de-topico",
+                    "created_in": "2025-09-23T14:00:00.000Z",
+                    "profiles": {
+                      "username": "joaozinho",
+                      "avatar_url": "https://cdn.exemplo.com/avatars/joao.png",
+                      "role": "membro"
+                    },
+                    "imagens": [
+                      {
+                        "id": 1,
+                        "url": "https://cdn.exemplo.com/images/topic-image.png"
+                      }
+                    ],
+                    "comentarios": [
+                      {
+                        "id": 101,
+                        "content": "Muito bom esse tópico!",
+                        "author_id": "uuid-123",
+                        "topic_id": 12,
+                        "created_in": "2025-09-23T15:00:00.000Z",
+                        "profiles": {
+                          "username": "maria",
+                          "avatar_url": "https://cdn.exemplo.com/avatars/maria.png",
+                          "role": "membro"
+                        }
+                      }
+                    ]
+                  },
+                  "totalComments": 1
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID de tópico inválido."
+          },
+          "404": {
+            "description": "Tópico não encontrado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Tópicos e Comentários"],
+        "summary": "Atualiza um tópico",
+        "description": "Atualiza o título e/ou conteúdo de um tópico. Requer autenticação e que o usuário seja o autor do tópico.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "ID do tópico a ser atualizado."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "content": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tópico atualizado com sucesso."
+          },
+          "400": {
+            "description": "ID de tópico inválido."
+          },
+          "401": {
+            "description": "Usuário não autenticado."
+          },
+          "403": {
+            "description": "Usuário não autorizado a editar este tópico."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Tópicos e Comentários"],
+        "summary": "Deleta um tópico",
+        "description": "Deleta um tópico. Requer autenticação e que o usuário seja o autor do tópico.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "ID do tópico a ser deletado."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Tópico deletado com sucesso."
+          },
+          "400": {
+            "description": "ID de tópico inválido."
+          },
+          "401": {
+            "description": "Usuário não autenticado."
+          },
+          "403": {
+            "description": "Usuário não autorizado a deletar este tópico."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/topics/slug/{slug}": {
+      "get": {
+        "tags": ["Tópicos e Comentários"],
+        "summary": "Busca um tópico pelo slug",
+        "description": "Retorna um tópico e seus comentários paginados através do seu slug.",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Slug do tópico"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Número da página de comentários."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Número de comentários por página."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tópico retornado com sucesso.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "id": 12,
+                    "title": "Primeiro Tópico",
+                    "content": "Criando tópico",
+                    "author_id": "45278b49-0ca0-43fc-9456-7f03f2096057",
+                    "category": "general-discussions",
+                    "created_in": "2025-09-02T22:30:18.159792+00:00",
+                    "updated_in": null,
+                    "slug": "sobre-o-forum-1756852218009",
+                    "profiles": {
+                      "role": "Desenvolvedor",
+                      "username": "joaosilva",
+                      "avatar_url": "https://cdn.exemplo.com/avatars/joaosilva.png"
+                    },
+                    "imagens": [],
+                    "comentarios": []
+                  },
+                  "totalComments": 0
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Slug é obrigatório."
+          },
+          "404": {
+            "description": "Tópico não encontrado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/topics/{topicId}/comments": {
+      "post": {
+        "tags": ["Tópicos e Comentários"],
+        "summary": "Cria um novo comentário",
+        "description": "Adiciona um novo comentário a um tópico. Requer autenticação e pode incluir upload de arquivos.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "topicId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "ID do tópico onde o comentário será postado."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "description": "O conteúdo do comentário (mínimo 1 caracter)."
+                  },
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "description": "Até 5 imagens para o comentário."
+                  }
+                },
+                "required": ["content"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comentário criado com sucesso."
+          },
+          "400": {
+            "description": "ID de tópico ou data do comentário inválidos."
+          },
+          "401": {
+            "description": "Usuário não autenticado."
+          },
+          "403": {
+            "description": "Usuário não tem permissão para comentar neste tópico."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/comments/{id}": {
+      "delete": {
+        "tags": ["Tópicos e Comentários"],
+        "summary": "Deleta um comentário",
+        "description": "Deleta um comentário. Requer autenticação e que o usuário seja o autor do comentário.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "ID do comentário a ser deletado."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Comentário deletado com sucesso."
+          },
+          "400": {
+            "description": "ID de comentário inválido."
+          },
+          "401": {
+            "description": "Usuário não autenticado."
+          },
+          "403": {
+            "description": "Usuário não autorizado a deletar este comentário."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/comments/{commentId}": {
+      "patch": {
+        "tags": ["Tópicos e Comentários"],
+        "summary": "Atualiza um comentário",
+        "description": "Atualiza o conteúdo de um comentário. Requer autenticação e que o usuário seja o autor do comentário.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "commentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "ID do comentário a ser atualizado."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string"
+                  }
+                },
+                "required": ["content"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comentário atualizado com sucesso."
+          },
+          "400": {
+            "description": "ID de comentário inválido ou conteúdo faltando."
+          },
+          "401": {
+            "description": "Usuário não autenticado."
+          },
+          "403": {
+            "description": "Usuário não autorizado a editar este comentário."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/topics/check-permission": {
+      "post": {
+        "tags": ["Permissões"],
+        "summary": "Verifica permissão para criar tópico",
+        "description": "Verifica se o usuário autenticado tem permissão para criar um tópico em uma determinada categoria.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "description": "O slug da categoria onde se deseja criar o tópico."
+                  }
+                },
+                "required": ["category"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Permissão verificada."
+          },
+          "400": {
+            "description": "A categoria é obrigatória."
+          },
+          "401": {
+            "description": "Usuário não autenticado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/comments/{topicId}/check-permission": {
+      "get": {
+        "tags": ["Permissões"],
+        "summary": "Verifica permissão para criar comentário",
+        "description": "Verifica se o usuário autenticado tem permissão para criar um comentário em um determinado tópico.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "topicId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "O ID do tópico que se deseja comentar."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Permissão verificada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "allowed": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "O ID do tópico é inválido."
+          },
+          "401": {
+            "description": "Usuário não autenticado."
+          },
+          "500": {
+            "description": "Erro interno do servidor."
+          }
+        }
+      }
+    },
+    "/stats": {
+      "get": {
+        "tags": ["Fórum"],
+        "summary": "Obtém estatísticas gerais do fórum",
+        "description": "Retorna estatísticas gerais sobre o fórum, como número de membros, tópicos e total de posts.",
+        "responses": {
+          "200": {
+            "description": "Estatísticas retornadas com sucesso.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "activeMembers": 57,
+                  "totalTopics": 134,
+                  "totalPosts": 892,
+                  "newestMember": {
+                    "username": "NewUser123",
+                    "role": "Membro"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro ao calcular as estatísticas do fórum."
+          }
+        }
+      }
+    },
+    "/posts/recent": {
+      "get": {
+        "tags": ["Fórum"],
+        "summary": "Busca os posts mais recentes",
+        "description": "Retorna uma lista das publicações mais recentes do fórum, incluindo tópicos e comentários.",
+        "responses": {
+          "200": {
+            "description": "Publicações recentes retornadas com sucesso.",
+            "content": {
+              "application/json": {
+                "example": [
+                  {
+                    "id": 101,
+                    "title": "Novas regras do fórum",
+                    "topic_slug": "novas-regras-do-forum-1759000000000",
+                    "created_in": "2025-09-20T18:45:00.000Z",
+                    "category_name": "Anúncios",
+                    "category_slug": "announcements",
+                    "author_username": "AdminMaster",
+                    "author_avatar": "https://cdn.exemplo.com/avatars/admin.png",
+                    "role": "Administrador",
+                    "comment_count": 3
+                  },
+                  {
+                    "id": 99,
+                    "title": "Qual seu jogo favorito?",
+                    "topic_slug": "qual-seu-jogo-favorito-1758990000000",
+                    "created_in": "2025-09-19T22:15:00.000Z",
+                    "category_name": "Discussões Gerais",
+                    "category_slug": "general-discussions",
+                    "author_username": "GameLover",
+                    "author_avatar": "https://cdn.exemplo.com/avatars/gamelover.png",
+                    "role": "Membro",
+                    "comment_count": 12
+                  }
+                ]
+              }
+            }
+          },
+          "500": {
+            "description": "Erro ao buscar as publicações recentes."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

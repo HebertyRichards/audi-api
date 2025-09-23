@@ -30,6 +30,25 @@ export async function updateUserProfile(req: AuthenticatedRequest, res: Response
   }
 }
 
+export async function updateProfile(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  try {
+    const token = req.cookies['sb-access-token'];
+    const { username, newEmail } = req.body;
+
+    if (!token) {
+      return res.status(401).json({ error: 'Token de autenticação não fornecido.' });
+    }
+    if (!username || !newEmail) {
+      return res.status(400).json({ error: 'Nome de usuário e e-mail são obrigatórios.' });
+    }
+    
+    const result = await profileService.updateUserProfileAndAuth(token, username, newEmail);
+    return res.status(200).json(result);
+  } catch (error: unknown) {
+    handleControllerError(error, res, next);
+  }
+}
+
 export async function getUserProfile(req: Request, res: Response, next: NextFunction) {
   try {
     const { username } = req.params;

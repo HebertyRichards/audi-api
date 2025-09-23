@@ -11,6 +11,8 @@ import statisticRoutes from './routes/statisticRoutes'
 import followRoutes from "./routes/followRoutes"
 import forumRoutes from "./routes/forumRoutes"
 import permissionRoutes from './routes/permissionRoutes'
+import swaggerUi from 'swagger-ui-express';
+import swaggerDocument from './swagger.json';
 
 dotenv.config();
 
@@ -30,7 +32,8 @@ app.use('/statistic',  statisticRoutes)
 app.use('/follow', followRoutes)
 app.use('/forum', forumRoutes)
 app.use('/permission', permissionRoutes)
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
-});
+  console.log(`Documentação da API disponível em http://localhost:${PORT}/api-docs`);});

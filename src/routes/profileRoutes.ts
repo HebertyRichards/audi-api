@@ -8,8 +8,9 @@ const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
 router.get('/:id', profileController.getProfile);
-router.put('/update', authenticateUser, profileController.updateUserProfile);
 router.get('/user/:username', profileController.getUserProfile);
+router.put('/update', authenticateUser, profileController.updateUserProfile);
+router.patch('/update-data', authenticateUser, profileController.updateProfile);
 router.patch(
     '/user/avatar',
     authenticateUser,
