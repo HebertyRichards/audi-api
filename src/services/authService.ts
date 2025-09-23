@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from '../config/supabase';
+import { supabase, supabaseAdmin, createAuthenticatedClient } from '../config/supabase';
 import { AuthApiError } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { RegisterOptions, RecoveryOptions } from '../types/auth';
@@ -138,6 +138,22 @@ export async function updatePasswordWithToken(accessToken: string, newPassword: 
   return { message: 'Senha atualizada com sucesso!' };
 }
 
+export async function updateAuthenticatedUserPassword(accessToken: string, newPassword: string) {
+  const supabaseAuthenticated = createAuthenticatedClient(accessToken);
+  const { error } = await supabaseAuthenticated.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (error) {
+     if (error.message.includes('Password should be at least 6 characters')) {
+       throw new AppError('BAD_REQUEST', 'A nova senha deve ter no mínimo 6 caracteres.');
+    }
+    throw new AppError('INTERNAL_SERVER_ERROR', 'Não foi possível atualizar a senha.');
+  }
+
+  return { message: 'Senha atualizada com sucesso!' };
+}
+
 export async function sendRecoveryEmail(email: string, options?: RecoveryOptions) {
   const redirectTo = options?.redirectTo ?? `${process.env.FRONTEND_URL}/reset-password`;
 
@@ -152,45 +168,6 @@ export async function sendRecoveryEmail(email: string, options?: RecoveryOptions
     throw new AppError('INTERNAL_SERVER_ERROR', 'Não foi possível processar sua solicitação.');
   }
   return { message: 'Se uma conta com este e-mail existir, um link para redefinição de senha foi enviado.' };
-}
-
-export async function updateUserProfileAndAuth(accessToken: string, newUsername: string, newEmail: string) {
-  const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
-
-  if (userError || !user) {
-    throw new AppError('UNAUTHORIZED', 'Token inválido ou expirado. Faça login novamente.');
-  }
-
-  const { error: profileError } = await supabase
-    .from('profiles')
-    .update({ username: newUsername })
-    .eq('id', user.id);
-  
-  if (profileError) {
-    if (profileError.code === '23505') { 
-      throw new AppError('CONFLICT', 'Este nome de usuário já está em uso.');
-    }
-    throw new AppError('INTERNAL_SERVER_ERROR', 'Não foi possível atualizar o nome de usuário.');
-  }
-
-  if (newEmail && newEmail.toLowerCase() !== user.email?.toLowerCase()) {
-    const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(
-      user.id,
-      { email: newEmail }
-    );
-
-    if (updateAuthError) {
-      if (updateAuthError.message.includes("already been registered")) {
-        throw new AppError('CONFLICT', 'Este novo e-mail já está em uso por outra conta.');
-      }
-      console.error("Supabase email update error:", updateAuthError); 
-      throw new AppError('INTERNAL_SERVER_ERROR', 'Ocorreu uma falha ao tentar atualizar o e-mail.');
-    }
-    
-    return { message: "Perfil atualizado! Um e-mail de confirmação foi enviado para o novo endereço." };
-  }
-
-  return { message: "Perfil atualizado com sucesso!" };
 }
 
 export async function deleteUserAccount(userId: string, email: string, password: string) {

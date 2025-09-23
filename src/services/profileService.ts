@@ -24,7 +24,7 @@ Pick<
 
 export async function updateProfile(profile: Partial<UserProfileData> & { id: string }) {
   const { id, ...profileData } = profile;
-  const allowedFields = ['username', 'website', 'gender', 'birthdate', 'location', 'facebook', 'instagram', 'discord', 'steam'] as const;
+  const allowedFields = ['website', 'gender', 'birthdate', 'location', 'facebook', 'instagram', 'discord', 'steam'] as const;
 
   const fieldsToUpdate: Partial<Record<typeof allowedFields[number], string | number | null>> = {};
   for (const key of allowedFields) {
@@ -60,6 +60,44 @@ export async function updateProfile(profile: Partial<UserProfileData> & { id: st
   }
 
   return { message: 'Perfil atualizado com sucesso!' };
+}
+
+export async function updateUserProfileAndAuth(accessToken: string, newUsername: string, newEmail: string) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
+
+  if (userError || !user) {
+    throw new AppError('UNAUTHORIZED', 'Token inválido ou expirado. Faça login novamente.');
+  }
+
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({ username: newUsername })
+    .eq('id', user.id);
+  
+  if (profileError) {
+    if (profileError.code === '23505') { 
+      throw new AppError('CONFLICT', 'Este nome de usuário já está em uso.');
+    }
+    throw new AppError('INTERNAL_SERVER_ERROR', 'Não foi possível atualizar o nome de usuário.');
+  }
+
+  if (newEmail && newEmail.toLowerCase() !== user.email?.toLowerCase()) {
+    const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(
+      user.id,
+      { email: newEmail }
+    );
+
+    if (updateAuthError) {
+      if (updateAuthError.message.includes("already been registered")) {
+        throw new AppError('CONFLICT', 'Este novo e-mail já está em uso por outra conta.');
+      }
+      throw new AppError('INTERNAL_SERVER_ERROR', 'Ocorreu uma falha ao tentar atualizar o e-mail.');
+    }
+    
+    return { message: "Perfil atualizado! Um e-mail de confirmação foi enviado para o novo endereço." };
+  }
+
+  return { message: "Perfil atualizado com sucesso!" };
 }
 
 export async function getUserProfileByUsername(username: string): Promise<UserProfileWithoutId> {

@@ -10,7 +10,7 @@ router.post('/logout', authController.logout);
 router.put('/change-password',authController.changePassword)
 router.post('/forgot-password', authController.sendRecoveryEmail)
 router.get('/session', authController.getSession);
-router.patch('/update-password', authenticateUser, authController.changePassword)
+router.patch('/update-password', authenticateUser, authController.updatePassword);
 router.delete('/delete-account',authenticateUser,authController.deleteAccount)
 
 export default router;

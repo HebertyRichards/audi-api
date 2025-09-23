@@ -128,6 +128,26 @@ export async function changePassword(req: Request, res: Response, next: NextFunc
   }
 }
 
+export async function updatePassword(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { newPassword } = req.body;
+    const token = req.cookies['sb-access-token'];
+
+    if (!token) {
+      return res.status(401).json({ error: 'Usuário não autenticado.' });
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: 'A nova senha deve ter pelo menos 6 caracteres.' });
+    }
+    
+    const result = await authService.updateAuthenticatedUserPassword(token, newPassword);
+    return res.status(200).json(result);
+  } catch (error: unknown) {
+    handleControllerError(error, res, next);
+  }
+}
+
 export async function sendRecoveryEmail(req: Request, res: Response, next: NextFunction) {
   try {
     const { email } = req.body;
@@ -135,25 +155,6 @@ export async function sendRecoveryEmail(req: Request, res: Response, next: NextF
       return res.status(400).json({ error: "E-mail é obrigatório." });
     }
     const result = await authService.sendRecoveryEmail(email);
-    return res.status(200).json(result);
-  } catch (error: unknown) {
-    handleControllerError(error, res, next);
-  }
-}
-
-export async function updateProfile(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  try {
-    const token = req.cookies['sb-access-token'];
-    const { username, newEmail } = req.body;
-
-    if (!token) {
-      return res.status(401).json({ error: 'Token de autenticação não fornecido.' });
-    }
-    if (!username || !newEmail) {
-      return res.status(400).json({ error: 'Nome de usuário e e-mail são obrigatórios.' });
-    }
-    
-    const result = await authService.updateUserProfileAndAuth(token, username, newEmail);
     return res.status(200).json(result);
   } catch (error: unknown) {
     handleControllerError(error, res, next);
